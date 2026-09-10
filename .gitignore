@@ -1,0 +1,19 @@
+# dependencies
+node_modules
+
+# next.js
+.next
+next-env.d.ts
+*.tsbuildinfo
+
+# env — chỉ commit .env.example
+.env
+.env*.local
+
+# supabase (local dev state / secrets)
+supabase/.branches
+supabase/.temp
+
+# misc
+npm-debug.log*
+.DS_Store
