@@ -83,7 +83,12 @@ export default function StudentWriteTopic({
       <p className="text-sm font-medium text-ink-faint">
         {topic.topic_type === 'essay' ? 'Bài luận' : 'Dịch đoạn văn'}
       </p>
-      <h1 className="text-2xl font-bold sm:text-3xl">{topic.title}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-2xl font-bold sm:text-3xl">{topic.title}</h1>
+        <a href={`/classes/${classId}/writing/${topicId}/edit`} className="btn-secondary btn-sm">
+          Sửa chủ đề
+        </a>
+      </div>
       {topic.prompt && <p className="mt-2 text-sm text-ink-soft">{topic.prompt}</p>}
       {topic.source_text && (
         <p className="mt-3 whitespace-pre-wrap rounded-lg bg-paper p-3 text-sm text-ink-soft">

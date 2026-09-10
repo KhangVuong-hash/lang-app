@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getClassAccess } from '@/lib/access';
@@ -37,8 +38,20 @@ export default async function ClassOverview({ params }: { params: { classId: str
         eyebrow={[langName, klass.level].filter(Boolean).join(' · ')}
         title={klass.name}
       >
-        {isTeacher && <StatusPill tone="info">Bạn tạo lớp này</StatusPill>}
-        {!isTeacher && isEnrolled && <StatusPill tone="open">Bạn đang học lớp này</StatusPill>}
+        <div className="flex flex-wrap items-center gap-2">
+          {isTeacher && <StatusPill tone="info">Bạn tạo lớp này</StatusPill>}
+          {!isTeacher && isEnrolled && (
+            <StatusPill tone="open">Bạn đang học lớp này</StatusPill>
+          )}
+          {access.isAdmin && !isTeacher && !isEnrolled && (
+            <StatusPill tone="info">Quản trị viên</StatusPill>
+          )}
+          {canManage && (
+            <Link href={`/classes/${params.classId}/edit`} className="btn-secondary btn-sm">
+              Sửa thông tin
+            </Link>
+          )}
+        </div>
       </PageHeader>
 
       <div className="mb-6 flex items-center gap-3">

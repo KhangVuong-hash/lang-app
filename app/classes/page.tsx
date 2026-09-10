@@ -19,13 +19,21 @@ export default async function ClassesDashboard() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: teaching }, { data: enrollments }, { data: invites }] = await Promise.all([
-    supabase
-      .from('classes')
-      .select('*, languages(name), class_skills(skill_type, is_enabled)')
-      .eq('teacher_id', user?.id)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false }),
+  const { data: me } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user?.id)
+    .maybeSingle();
+  const isAdmin = me?.role === 'admin';
+
+  const [{ data: teaching }, { data: enrollments }, { data: invites }, { data: allClasses }] =
+    await Promise.all([
+      supabase
+        .from('classes')
+        .select('*, languages(name), class_skills(skill_type, is_enabled)')
+        .eq('teacher_id', user?.id)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false }),
     supabase
       .from('enrollments')
       .select(
@@ -33,12 +41,21 @@ export default async function ClassesDashboard() {
       )
       .eq('student_id', user?.id)
       .eq('status', 'active'),
-    supabase
-      .from('enrollments')
-      .select('id, class_id, classes(name, language_code, profiles!classes_teacher_id_fkey(full_name))')
-      .eq('student_id', user?.id)
-      .eq('status', 'invited'),
-  ]);
+      supabase
+        .from('enrollments')
+        .select('id, class_id, classes(name, language_code, profiles!classes_teacher_id_fkey(full_name))')
+        .eq('student_id', user?.id)
+        .eq('status', 'invited'),
+      isAdmin
+        ? supabase
+            .from('classes')
+            .select(
+              '*, languages(name), class_skills(skill_type, is_enabled), profiles!classes_teacher_id_fkey(full_name)'
+            )
+            .is('deleted_at', null)
+            .order('created_at', { ascending: false })
+        : Promise.resolve({ data: [] as any[] }),
+    ]);
 
   const taught = teaching ?? [];
 
@@ -58,7 +75,11 @@ export default async function ClassesDashboard() {
 
   const learning = (enrollments ?? []).filter((e: any) => e.classes);
   const pending = (invites ?? []).filter((e: any) => e.classes);
-  const nothing = taught.length === 0 && learning.length === 0 && pending.length === 0;
+  const nothing =
+    taught.length === 0 &&
+    learning.length === 0 &&
+    pending.length === 0 &&
+    !(isAdmin && (allClasses ?? []).length > 0);
 
   return (
     <div className="container-page py-8">
@@ -145,6 +166,30 @@ export default async function ClassesDashboard() {
                 />
               );
             })}
+          </div>
+        </section>
+      )}
+
+      {isAdmin && (allClasses ?? []).length > 0 && (
+        <section className="mt-10">
+          <h2 className="mb-1 font-display text-lg font-semibold">
+            Tất cả lớp học ({(allClasses ?? []).length})
+          </h2>
+          <p className="mb-3 text-xs text-ink-soft">
+            Quản trị viên xem và quản lý được mọi lớp mà không cần lời mời.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {(allClasses ?? []).map((c: any) => (
+              <ClassCard
+                key={c.id}
+                href={`/classes/${c.id}`}
+                name={c.name}
+                languageCode={c.language_code}
+                level={c.level}
+                meta={`GV: ${c.profiles?.full_name ?? '-'}`}
+                enabledSkills={enabledOf(c)}
+              />
+            ))}
           </div>
         </section>
       )}

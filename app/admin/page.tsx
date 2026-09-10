@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import PageHeader from '@/components/ui/PageHeader';
 import LanguageCrest from '@/components/ui/LanguageCrest';
@@ -48,20 +49,28 @@ export default async function AdminPage() {
       </div>
 
       <div className="card mt-6 p-5">
-        <h2 className="mb-3 font-display text-lg font-semibold">
+        <h2 className="mb-1 font-display text-lg font-semibold">
           Lớp học ({classes?.length ?? 0})
         </h2>
+        <p className="mb-3 text-xs text-ink-soft">
+          Bấm vào lớp để xem và quản lý — quản trị viên vào được mọi lớp mà không cần lời mời.
+        </p>
         <ul className="divide-y divide-line">
           {(classes ?? []).map((c: any) => (
-            <li key={c.id} className="flex items-center gap-3 py-2.5 text-sm">
-              <LanguageCrest code={c.language_code} size="sm" />
-              <div>
-                <p className="font-medium text-ink">{c.name}</p>
-                <p className="text-xs text-ink-faint">
-                  {LANGUAGE_MAP[c.language_code]?.name ?? c.languages?.name} · GV:{' '}
-                  {c.profiles?.full_name ?? '-'}
-                </p>
-              </div>
+            <li key={c.id}>
+              <Link
+                href={`/classes/${c.id}`}
+                className="flex items-center gap-3 rounded-lg py-2.5 text-sm hover:bg-paper"
+              >
+                <LanguageCrest code={c.language_code} size="sm" />
+                <div>
+                  <p className="font-medium text-ink">{c.name}</p>
+                  <p className="text-xs text-ink-faint">
+                    {LANGUAGE_MAP[c.language_code]?.name ?? c.languages?.name} · GV:{' '}
+                    {c.profiles?.full_name ?? '-'}
+                  </p>
+                </div>
+              </Link>
             </li>
           ))}
         </ul>

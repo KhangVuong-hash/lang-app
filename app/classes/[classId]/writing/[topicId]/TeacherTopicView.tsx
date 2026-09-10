@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import PageHeader from '@/components/ui/PageHeader';
@@ -44,7 +45,14 @@ export default async function TeacherTopicView({
         back={{ href: `/classes/${classId}/writing`, label: 'Chủ đề viết' }}
         eyebrow={topic.topic_type === 'essay' ? 'Bài luận' : 'Dịch đoạn văn'}
         title={topic.title}
-      />
+      >
+        <Link
+          href={`/classes/${classId}/writing/${topicId}/edit`}
+          className="btn-secondary btn-sm"
+        >
+          Sửa chủ đề
+        </Link>
+      </PageHeader>
 
       {topic.prompt && <p className="mb-2 text-sm text-ink-soft">{topic.prompt}</p>}
       {topic.source_text && (
