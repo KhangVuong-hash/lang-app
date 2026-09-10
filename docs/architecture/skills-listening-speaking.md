@@ -2,14 +2,15 @@
 
 ## Lấy script từ YouTube - `POST /api/youtube/transcript`
 
-- Nhận `{ youtubeUrl, lang? }`. `extractYoutubeId` → video ID.
-- `YoutubeTranscript.fetchTranscript(videoId, { lang })` lấy phụ đề public timedtext.
-- Chuẩn hoá: `offset` (ms) → `start_seconds`, `offset + duration` → `end_seconds`, giải mã
-  vài HTML entity trong `text`.
-- Lỗi (video không phụ đề / private / YouTube đổi cấu trúc) → trả `422` kèm thông điệp; UI
-  luôn có lối thoát: giáo viên nhập / sửa script thủ công.
-
-`youtube-transcript` là thư viện **không chính thức** - coi như best-effort.
+- Nhận `{ youtubeUrl }`. `extractYoutubeId` để validate.
+- Gọi **Google Gemini** (`generateContent`, `fileData.fileUri` = URL YouTube), prompt yêu
+  cầu trả mảng JSON `{start, text}`. Thử lần lượt `GEMINI_MODEL` → `gemini-3.6-flash` →
+  `gemini-flash-latest` → `gemini-2.0-flash`. Strip ```` ```json ```` rồi parse.
+- Cần env `GEMINI_API_KEY` (free tier ở aistudio.google.com/apikey). Không có key hoặc
+  Gemini fail → `422` kèm `detail`; UI chuyển sang **dán transcript thủ công**
+  (`lib/transcript.ts` `parseTranscript`) hoặc nhập từng dòng.
+- Không còn dùng thư viện `youtube-transcript` (hay bị chặn trên IP datacenter).
+- Video dài (>20 phút) mất 20-60s và tốn token; có thể bị cắt ở `outputTokenLimit`.
 
 ## Tạo bài (giáo viên)
 

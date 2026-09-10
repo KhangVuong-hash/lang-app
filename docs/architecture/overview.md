@@ -6,7 +6,7 @@
 - **Tailwind CSS 3.4** - token tuỳ chỉnh trong `tailwind.config.js`
 - **Supabase** - Postgres + Auth + Storage; `@supabase/ssr` cho session qua cookie
 - **TypeScript**, package manager **pnpm**
-- `youtube-transcript` (không chính thức) để lấy phụ đề YouTube
+- Google Gemini API (`gemini-3.6-flash`) để chép lời video YouTube
 
 ## Cấu trúc thư mục
 
@@ -28,7 +28,7 @@ app/
         [lessonId]/[topicId] - player / editor, adaptive
   admin/  profile/         layout.tsx bọc AppShell
   api/
-    youtube/transcript/   POST: URL → segments
+    youtube/transcript/   POST: URL YouTube -> segments (Gemini)
     enroll-student/       POST: thêm học sinh vào lớp bằng email (service role)
 
 components/

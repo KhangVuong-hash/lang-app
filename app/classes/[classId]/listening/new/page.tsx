@@ -16,7 +16,6 @@ export default function NewListeningLessonPage() {
 
   const [title, setTitle] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
-  const [lang, setLang] = useState(''); // để trống = auto
   const [segments, setSegments] = useState<ScriptSegment[]>([]);
   const [pasteText, setPasteText] = useState('');
   const [videoId, setVideoId] = useState<string | null>(null);
@@ -32,11 +31,11 @@ export default function NewListeningLessonPage() {
       const res = await fetch('/api/youtube/transcript', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ youtubeUrl, lang }),
+        body: JSON.stringify({ youtubeUrl }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'Lỗi không xác định');
+        setError((data.error || 'Lỗi không xác định') + (data.detail ? ` (${data.detail})` : ''));
         setVideoId(extractYoutubeId(youtubeUrl));
         return;
       }
@@ -156,19 +155,6 @@ export default function NewListeningLessonPage() {
               placeholder="https://www.youtube.com/watch?v=..."
               className="input flex-1"
             />
-            <select
-              value={lang}
-              onChange={(e) => setLang(e.target.value)}
-              className="select w-auto"
-              title="Ngôn ngữ phụ đề mong muốn (để trống = mặc định)"
-            >
-              <option value="">Auto</option>
-              <option value="en">EN</option>
-              <option value="ja">JA</option>
-              <option value="ko">KO</option>
-              <option value="zh-Hans">ZH</option>
-              <option value="vi">VI</option>
-            </select>
             <button
               onClick={fetchTranscript}
               disabled={!youtubeUrl || fetching}
@@ -179,7 +165,7 @@ export default function NewListeningLessonPage() {
             </button>
           </div>
           <p className="mt-1 text-xs text-ink-faint">
-            Hệ thống sẽ tự lấy phụ đề có sẵn trên video YouTube (nếu có). Nếu video không có phụ đề, bạn có thể tự thêm dòng script thủ công bên dưới.
+            Dùng AI (Gemini) tạo script trực tiếp từ video. Nếu lỗi, dán transcript từ YouTube hoặc tự thêm dòng bên dưới.
           </p>
         </div>
 

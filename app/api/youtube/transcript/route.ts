@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { YoutubeTranscript } from 'youtube-transcript';
 import { extractYoutubeId } from '@/lib/youtube';
 
 export const maxDuration = 60; // Gemini có thể mất vài chục giây với video dài
@@ -11,43 +10,13 @@ type Segment = {
   text_content: string;
 };
 
-/** Cách 1: dịch vụ transcript của Google Gemini (nhận thẳng URL YouTube). */
-async function viaGemini(youtubeUrl: string, apiKey: string): Promise<Segment[]> {
-  const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { fileData: { fileUri: youtubeUrl } },
-              {
-                text:
-                  'Chép lời video này theo từng câu hoặc cụm ngắn, đúng ngôn ngữ gốc. ' +
-                  'Trả về JSON: mảng các object {"start": <giây, số>, "text": <chuỗi>} theo thứ tự thời gian. ' +
-                  'Không thêm giải thích, không markdown.',
-              },
-            ],
-          },
-        ],
-        generationConfig: { responseMimeType: 'application/json', temperature: 0 },
-      }),
-    }
-  );
+const PROMPT =
+  'Chép lời (transcribe) video YouTube này theo từng câu hoặc cụm ngắn, đúng ngôn ngữ gốc. ' +
+  'CHỈ trả về một mảng JSON gồm các object {"start": <giây tính từ đầu video, số thực>, "text": <chuỗi>}, ' +
+  'theo thứ tự thời gian. Không kèm giải thích, không markdown, không ```json.';
 
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Gemini ${res.status}: ${body.slice(0, 300)}`);
-  }
-
-  const data = await res.json();
-  const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '[]';
-  const parsed = JSON.parse(raw) as { start: number; text: string }[];
-
-  return parsed
+function toSegments(list: { start: number; text: string }[]): Segment[] {
+  return list
     .filter((p) => p && typeof p.text === 'string' && p.text.trim())
     .map((p, i, arr) => {
       const start = Number(p.start) || 0;
@@ -61,19 +30,63 @@ async function viaGemini(youtubeUrl: string, apiKey: string): Promise<Segment[]>
     });
 }
 
-/** Cách 2 (dự phòng): cào phụ đề public - hay bị chặn trên IP datacenter. */
-async function viaScrape(videoId: string, lang?: string): Promise<Segment[]> {
-  const raw = await YoutubeTranscript.fetchTranscript(videoId, { lang: lang || undefined });
-  return raw.map((seg, idx) => ({
-    order_index: idx,
-    start_seconds: Math.round((seg.offset / 1000) * 100) / 100,
-    end_seconds: Math.round(((seg.offset + seg.duration) / 1000) * 100) / 100,
-    text_content: seg.text.replace(/&#39;/g, "'").replace(/&amp;/g, '&').trim(),
-  }));
+function extractJsonArray(text: string): { start: number; text: string }[] {
+  const cleaned = text.replace(/```json\s*|\s*```/g, '').trim();
+  try {
+    const v = JSON.parse(cleaned);
+    if (Array.isArray(v)) return v;
+    if (Array.isArray(v?.segments)) return v.segments;
+  } catch {
+    const m = cleaned.match(/\[[\s\S]*\]/);
+    if (m) {
+      try {
+        return JSON.parse(m[0]);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+  return [];
+}
+
+async function callGemini(model: string, youtubeUrl: string, apiKey: string) {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          { parts: [{ fileData: { fileUri: youtubeUrl } }, { text: PROMPT }] },
+        ],
+        generationConfig: { temperature: 0 },
+      }),
+    }
+  );
+
+  const bodyText = await res.text();
+  if (!res.ok) {
+    throw new Error(`${model} → HTTP ${res.status}: ${bodyText.slice(0, 400)}`);
+  }
+
+  let data: any;
+  try {
+    data = JSON.parse(bodyText);
+  } catch {
+    throw new Error(`${model} → phản hồi không phải JSON`);
+  }
+
+  const cand = data?.candidates?.[0];
+  const partText = cand?.content?.parts?.map((p: any) => p?.text).filter(Boolean).join('\n');
+  if (!partText) {
+    throw new Error(`${model} → không có nội dung (${cand?.finishReason ?? 'unknown'})`);
+  }
+
+  return toSegments(extractJsonArray(partText));
 }
 
 export async function POST(req: NextRequest) {
-  const { youtubeUrl, lang } = await req.json();
+  const { youtubeUrl } = await req.json();
 
   if (!youtubeUrl) {
     return NextResponse.json({ error: 'Thiếu youtubeUrl' }, { status: 400 });
@@ -83,32 +96,43 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'URL YouTube không hợp lệ' }, { status: 400 });
   }
 
-  const geminiKey = process.env.GEMINI_API_KEY;
-  const attempts: string[] = [];
-
-  if (geminiKey) {
-    try {
-      const segments = await viaGemini(youtubeUrl, geminiKey);
-      if (segments.length) return NextResponse.json({ videoId, segments, source: 'gemini' });
-      attempts.push('Gemini không trả về câu nào');
-    } catch (e: any) {
-      attempts.push(`Gemini: ${e.message}`);
-    }
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json(
+      {
+        error:
+          'Chưa cấu hình GEMINI_API_KEY. Hãy dán transcript từ YouTube ("Hiển thị bản chép lời") vào ô bên dưới.',
+      },
+      { status: 422 }
+    );
   }
 
-  try {
-    const segments = await viaScrape(videoId, lang);
-    return NextResponse.json({ videoId, segments, source: 'scrape' });
-  } catch (e: any) {
-    attempts.push(`Cào phụ đề: ${e?.message}`);
+  const models = [
+    ...new Set(
+      [
+        process.env.GEMINI_MODEL,
+        'gemini-3.6-flash',
+        'gemini-flash-latest',
+        'gemini-2.0-flash',
+      ].filter(Boolean) as string[]
+    ),
+  ];
+
+  const errors: string[] = [];
+  for (const model of models) {
+    try {
+      const segments = await callGemini(model, youtubeUrl, apiKey);
+      if (segments.length) return NextResponse.json({ videoId, segments, source: model });
+      errors.push(`${model}: 0 câu`);
+    } catch (e: any) {
+      errors.push(e?.message ?? String(e));
+    }
   }
 
   return NextResponse.json(
     {
-      error:
-        'Không lấy được script tự động cho video này. Bạn có thể dán transcript từ YouTube ' +
-        '("Hiển thị bản chép lời") hoặc nhập tay bên dưới.',
-      detail: attempts.join(' | '),
+      error: 'Gemini không lấy được script. Hãy dán transcript từ YouTube vào ô bên dưới.',
+      detail: errors.join(' | '),
     },
     { status: 422 }
   );

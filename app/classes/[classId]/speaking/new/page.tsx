@@ -16,7 +16,6 @@ export default function NewSpeakingLessonPage() {
 
   const [title, setTitle] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
-  const [lang, setLang] = useState('');
   const [segments, setSegments] = useState<ScriptSegment[]>([]);
   const [pasteText, setPasteText] = useState('');
   const [videoId, setVideoId] = useState<string | null>(null);
@@ -32,11 +31,11 @@ export default function NewSpeakingLessonPage() {
       const res = await fetch('/api/youtube/transcript', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ youtubeUrl, lang }),
+        body: JSON.stringify({ youtubeUrl }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'Lỗi không xác định');
+        setError((data.error || 'Lỗi không xác định') + (data.detail ? ` (${data.detail})` : ''));
         setVideoId(extractYoutubeId(youtubeUrl));
         return;
       }
@@ -134,14 +133,6 @@ export default function NewSpeakingLessonPage() {
               placeholder="https://www.youtube.com/watch?v=..."
               className="input flex-1"
             />
-            <select value={lang} onChange={(e) => setLang(e.target.value)} className="select w-auto">
-              <option value="">Auto</option>
-              <option value="en">EN</option>
-              <option value="ja">JA</option>
-              <option value="ko">KO</option>
-              <option value="zh-Hans">ZH</option>
-              <option value="vi">VI</option>
-            </select>
             <button
               onClick={fetchTranscript}
               disabled={!youtubeUrl || fetching}
