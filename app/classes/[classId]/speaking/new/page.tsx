@@ -147,7 +147,7 @@ export default function NewSpeakingLessonPage() {
               className="btn-primary shrink-0"
             >
               {fetching && <Spinner />}
-              {fetching ? 'Đang thử…' : 'Thử lấy bằng AI'}
+              {fetching ? 'Đang lấy…' : 'Lấy script tự động'}
             </button>
           </div>
         </div>

@@ -169,11 +169,11 @@ export default function NewListeningLessonPage() {
               className="btn-primary shrink-0"
             >
               {fetching && <Spinner />}
-              {fetching ? 'Đang thử…' : 'Thử lấy bằng AI'}
+              {fetching ? 'Đang lấy…' : 'Lấy script tự động'}
             </button>
           </div>
           <p className="mt-1 text-xs text-ink-faint">
-            Thử tạo script bằng AI (Gemini). Video dài vài phút trở lên hay bị quá thời gian — nhanh và chắc chắn nhất là dán transcript từ YouTube ở ô bên dưới.
+            Tự động lấy script từ phụ đề của video. Nếu video không có phụ đề, dán transcript từ YouTube hoặc tự thêm dòng bên dưới.
           </p>
         </div>
 

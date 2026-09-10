@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractYoutubeId } from '@/lib/youtube';
 
-export const maxDuration = 60; // Vercel: Hobby tối đa 60s
+export const maxDuration = 60;
 
 type Segment = {
   order_index: number;
@@ -10,27 +10,79 @@ type Segment = {
   text_content: string;
 };
 
-const PROMPT =
-  'Chép lời (transcribe) video YouTube này theo từng câu hoặc cụm ngắn, đúng ngôn ngữ gốc. ' +
-  'CHỈ trả về một mảng JSON gồm các object {"start": <giây tính từ đầu video, số thực>, "text": <chuỗi>}, ' +
-  'theo thứ tự thời gian. Không kèm giải thích, không markdown.';
-
-function toSegments(list: { start: number; text: string }[]): Segment[] {
+function normalize(
+  list: { start: number; end?: number; text: string }[]
+): Segment[] {
   return list
     .filter((p) => p && typeof p.text === 'string' && p.text.trim())
     .map((p, i, arr) => {
       const start = Number(p.start) || 0;
-      const next = arr[i + 1] ? Number(arr[i + 1].start) : start + 3;
+      const end =
+        p.end != null && Number(p.end) > start
+          ? Number(p.end)
+          : arr[i + 1]
+            ? Number(arr[i + 1].start)
+            : start + 3;
       return {
         order_index: i,
         start_seconds: Math.round(start * 100) / 100,
-        end_seconds: Math.round(Math.max(next, start + 0.5) * 100) / 100,
-        text_content: p.text.trim(),
+        end_seconds: Math.round(Math.max(end, start + 0.5) * 100) / 100,
+        text_content: p.text.replace(/\s+/g, ' ').trim(),
       };
     });
 }
 
-function extractJsonArray(text: string): { start: number; text: string }[] {
+/** Gộp các mẩu phụ đề ngắn của YouTube thành câu (~ kết thúc bằng dấu câu hoặc ≤ 16 từ). */
+function groupChunks(
+  chunks: { start: number; end: number; text: string }[]
+): { start: number; end: number; text: string }[] {
+  const out: { start: number; end: number; text: string }[] = [];
+  let cur: { start: number; end: number; text: string } | null = null;
+
+  for (const c of chunks) {
+    const t = c.text.replace(/\s+/g, ' ').trim();
+    if (!t || /^\[.*\]$/.test(t)) continue; // bỏ [Music], [Applause]...
+    if (!cur) {
+      cur = { start: c.start, end: c.end, text: t };
+      continue;
+    }
+    cur.text += ' ' + t;
+    cur.end = c.end;
+    const words = cur.text.split(' ').length;
+    if (/[.!?…]["')\]]?$/.test(cur.text) || words >= 16) {
+      out.push(cur);
+      cur = null;
+    }
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+
+/** Supadata — https://supadata.ai (lấy phụ đề có sẵn của YouTube, nhanh, không timeout). */
+async function viaSupadata(youtubeUrl: string, apiKey: string): Promise<Segment[]> {
+  const res = await fetch(
+    `https://api.supadata.ai/v1/youtube/transcript?url=${encodeURIComponent(youtubeUrl)}`,
+    { headers: { 'x-api-key': apiKey } }
+  );
+  const text = await res.text();
+  if (!res.ok) throw new Error(`Supadata HTTP ${res.status}: ${text.slice(0, 200)}`);
+
+  const data = JSON.parse(text);
+  const chunks: any[] = data.content ?? data.transcript ?? [];
+  const raw = chunks.map((c) => {
+    const offMs = Number(c.offset ?? c.start ?? 0);
+    const durMs = Number(c.duration ?? 0);
+    return { start: offMs / 1000, end: (offMs + durMs) / 1000, text: String(c.text ?? '') };
+  });
+  return normalize(groupChunks(raw));
+}
+
+const GEMINI_PROMPT =
+  'Chép lời (transcribe) video YouTube này theo từng câu hoặc cụm ngắn, đúng ngôn ngữ gốc. ' +
+  'CHỈ trả về một mảng JSON gồm các object {"start": <giây, số thực>, "text": <chuỗi>} theo thứ tự thời gian. ' +
+  'Không kèm giải thích, không markdown.';
+
+function extractJsonArray(text: string): any[] {
   const cleaned = text.replace(/```json\s*|```/g, '').trim();
   try {
     const v = JSON.parse(cleaned);
@@ -49,35 +101,11 @@ function extractJsonArray(text: string): { start: number; text: string }[] {
   return [];
 }
 
-export async function POST(req: NextRequest) {
-  const { youtubeUrl } = await req.json().catch(() => ({}));
-
-  if (!youtubeUrl) {
-    return NextResponse.json({ error: 'Thiếu youtubeUrl' }, { status: 400 });
-  }
-  const videoId = extractYoutubeId(youtubeUrl);
-  if (!videoId) {
-    return NextResponse.json({ error: 'URL YouTube không hợp lệ' }, { status: 400 });
-  }
-
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json(
-      {
-        error:
-          'Chưa cấu hình GEMINI_API_KEY. Hãy dán transcript từ YouTube ("Hiển thị bản chép lời") vào ô bên dưới.',
-      },
-      { status: 422 }
-    );
-  }
-
+async function viaGemini(youtubeUrl: string, apiKey: string): Promise<Segment[]> {
   const model = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
-  // Chép hết video dài (30+ phút) vượt quá giới hạn thời gian của serverless.
-  // Giới hạn cửa sổ xử lý; giáo viên dán phần còn lại nếu cần.
   const maxSeconds = Number(process.env.GEMINI_MAX_SECONDS || 900);
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 55_000);
-
+  const timer = setTimeout(() => controller.abort(), 50_000);
   try {
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
@@ -93,59 +121,71 @@ export async function POST(req: NextRequest) {
                   fileData: { fileUri: youtubeUrl },
                   videoMetadata: { startOffset: '0s', endOffset: `${maxSeconds}s` },
                 },
-                { text: PROMPT },
+                { text: GEMINI_PROMPT },
               ],
             },
           ],
-          generationConfig: {
-            temperature: 0,
-            thinkingConfig: { thinkingLevel: 'LOW' }, // giảm độ trễ; 3.6-flash chấp nhận
-          },
+          generationConfig: { temperature: 0, thinkingConfig: { thinkingLevel: 'LOW' } },
         }),
       }
     );
-
-    const bodyText = await res.text();
-    if (!res.ok) {
-      return NextResponse.json(
-        {
-          error: 'Gemini không lấy được script. Hãy dán transcript từ YouTube vào ô bên dưới.',
-          detail: `${model} HTTP ${res.status}: ${bodyText.slice(0, 300)}`,
-        },
-        { status: 422 }
-      );
-    }
-
-    const data = JSON.parse(bodyText);
+    const text = await res.text();
+    if (!res.ok) throw new Error(`Gemini HTTP ${res.status}: ${text.slice(0, 200)}`);
+    const data = JSON.parse(text);
     const partText: string = (data?.candidates?.[0]?.content?.parts ?? [])
       .map((p: any) => p?.text)
       .filter(Boolean)
       .join('\n');
-
-    const segments = toSegments(extractJsonArray(partText));
-    if (!segments.length) {
-      return NextResponse.json(
-        {
-          error: 'Gemini không trả về câu nào. Hãy dán transcript thủ công.',
-          detail: `finishReason=${data?.candidates?.[0]?.finishReason ?? '?'}`,
-        },
-        { status: 422 }
-      );
-    }
-
-    return NextResponse.json({ videoId, segments, source: model });
-  } catch (e: any) {
-    const aborted = e?.name === 'AbortError';
-    return NextResponse.json(
-      {
-        error: aborted
-          ? 'Video quá dài nên lấy script tự động bị quá thời gian. Hãy dùng video ngắn hơn hoặc dán transcript thủ công.'
-          : 'Không gọi được Gemini. Hãy dán transcript từ YouTube vào ô bên dưới.',
-        detail: String(e?.message ?? e),
-      },
-      { status: 422 }
+    return normalize(
+      extractJsonArray(partText).map((p: any) => ({ start: Number(p.start) || 0, text: String(p.text ?? '') }))
     );
   } finally {
     clearTimeout(timer);
   }
+}
+
+export async function POST(req: NextRequest) {
+  const { youtubeUrl } = await req.json().catch(() => ({}));
+
+  if (!youtubeUrl) {
+    return NextResponse.json({ error: 'Thiếu youtubeUrl' }, { status: 400 });
+  }
+  const videoId = extractYoutubeId(youtubeUrl);
+  if (!videoId) {
+    return NextResponse.json({ error: 'URL YouTube không hợp lệ' }, { status: 400 });
+  }
+
+  const errors: string[] = [];
+
+  if (process.env.SUPADATA_API_KEY) {
+    try {
+      const segments = await viaSupadata(youtubeUrl, process.env.SUPADATA_API_KEY);
+      if (segments.length) return NextResponse.json({ videoId, segments, source: 'supadata' });
+      errors.push('Supadata: 0 câu');
+    } catch (e: any) {
+      errors.push(String(e?.message ?? e));
+    }
+  }
+
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      const segments = await viaGemini(youtubeUrl, process.env.GEMINI_API_KEY);
+      if (segments.length) return NextResponse.json({ videoId, segments, source: 'gemini' });
+      errors.push('Gemini: 0 câu');
+    } catch (e: any) {
+      const aborted = e?.name === 'AbortError';
+      errors.push(aborted ? 'Gemini: quá thời gian' : String(e?.message ?? e));
+    }
+  }
+
+  return NextResponse.json(
+    {
+      error:
+        errors.length === 0
+          ? 'Chưa cấu hình khoá lấy script. Hãy dán transcript từ YouTube vào ô bên dưới.'
+          : 'Không lấy được script tự động. Hãy dán transcript từ YouTube vào ô bên dưới.',
+      detail: errors.join(' | '),
+    },
+    { status: 422 }
+  );
 }

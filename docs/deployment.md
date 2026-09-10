@@ -32,7 +32,8 @@ Project Settings → Environment Variables (áp cho Production + Preview + Devel
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref>.supabase.co` | công khai |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon key (hosted) | công khai |
 | `SUPABASE_SERVICE_ROLE_KEY` | service_role key (hosted) | **bí mật**, không prefix `NEXT_PUBLIC` |
-| `GEMINI_API_KEY` | key free ở [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | tuỳ chọn — bật "Lấy script tự động" từ URL YouTube; free tier ~1500 lần/ngày. Không có key thì chỉ còn dán transcript thủ công. |
+| `SUPADATA_API_KEY` | key ở [supadata.ai](https://supadata.ai) | tuỳ chọn — "Lấy script tự động"; nhanh, không timeout, free 100 req/tháng. Thử đầu tiên. |
+| `GEMINI_API_KEY` | key ở [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | tuỳ chọn — dự phòng nếu Supadata fail; free tier lớn nhưng chậm, dễ quá 60s. |
 
 > Không dùng lại key trong `.env` local - đó là key của Supabase local demo.
 
@@ -51,14 +52,13 @@ Project Settings → Environment Variables (áp cho Production + Preview + Devel
 
 ## Lưu ý
 
-- **Lấy script bằng AI**: `POST /api/youtube/transcript` gọi Gemini (`gemini-3.6-flash`)
-  với URL YouTube. Model này "suy nghĩ" nên **chậm** (30-90s tuỳ video) và thường **vượt
-  giới hạn 60s của Vercel Hobby** → trả lỗi "quá thời gian".
-  - Route tự huỷ ở 55s và trả JSON lỗi gọn (không phải trang lỗi HTML).
-  - `GEMINI_MAX_SECONDS` (mặc định 900) giới hạn cửa sổ video xử lý.
-  - Muốn ổn định hơn: nâng Vercel lên **Pro** (giới hạn 300s) rồi đặt `maxDuration` cao hơn.
-  - **Cách chắc chắn nhất**: giáo viên bấm "Hiển thị bản chép lời" dưới video YouTube, sao
-    chép, dán vào ô ở trang tạo/sửa bài — parse tức thì, không phụ thuộc gì.
+- **Lấy script tự động**: `POST /api/youtube/transcript` thử lần lượt:
+  1. **Supadata** (nếu có `SUPADATA_API_KEY`) — đọc phụ đề có sẵn của video, ~1-3s, không
+     timeout, gộp mẩu phụ đề thành câu. Cách chính, khuyến nghị.
+  2. **Gemini** (nếu có `GEMINI_API_KEY`) — chép lời bằng AI cho video **không có phụ đề**;
+     chậm, route tự huỷ ở 50s, dễ quá giới hạn Vercel Hobby cho video dài.
+  3. Không cái nào được → giáo viên **dán transcript** từ YouTube ("Hiển thị bản chép lời")
+     vào ô ở trang tạo/sửa bài (parse tức thì).
 - Middleware chạy trên Edge Runtime - `@supabase/ssr` tương thích, không cần chỉnh.
 - Chưa có route cho giáo viên nghe lại bài ghi âm của học sinh (bucket private). Cần thêm
   route tạo signed URL bằng service role - xem

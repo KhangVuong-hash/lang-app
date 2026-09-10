@@ -2,15 +2,20 @@
 
 ## Lấy script từ YouTube - `POST /api/youtube/transcript`
 
-- Nhận `{ youtubeUrl }`. `extractYoutubeId` để validate.
-- Gọi **Google Gemini** (`generateContent`, `fileData.fileUri` = URL YouTube), prompt yêu
-  cầu trả mảng JSON `{start, text}`. Thử lần lượt `GEMINI_MODEL` → `gemini-3.6-flash` →
-  `gemini-flash-latest` → `gemini-2.0-flash`. Strip ```` ```json ```` rồi parse.
-- Cần env `GEMINI_API_KEY` (free tier ở aistudio.google.com/apikey). Không có key hoặc
-  Gemini fail → `422` kèm `detail`; UI chuyển sang **dán transcript thủ công**
-  (`lib/transcript.ts` `parseTranscript`) hoặc nhập từng dòng.
-- Không còn dùng thư viện `youtube-transcript` (hay bị chặn trên IP datacenter).
-- Video dài (>20 phút) mất 20-60s và tốn token; có thể bị cắt ở `outputTokenLimit`.
+Nhận `{ youtubeUrl }`, validate bằng `extractYoutubeId`, rồi thử theo thứ tự:
+
+1. **Supadata** (`SUPADATA_API_KEY`) — `GET api.supadata.ai/v1/youtube/transcript?url=`,
+   header `x-api-key`. Trả `content[]` (`offset`/`duration` ms). `groupChunks()` gộp các
+   mẩu phụ đề ngắn thành câu (kết thúc bằng dấu câu hoặc ≤16 từ), bỏ `[Music]`. Nhanh (~2s),
+   không timeout. Cách chính.
+2. **Gemini** (`GEMINI_API_KEY`) — `generateContent`, `fileData.fileUri` = URL YouTube,
+   `thinkingLevel: LOW`, `videoMetadata.endOffset` = `GEMINI_MAX_SECONDS` (900). Dùng cho
+   video **không có phụ đề**. Chậm; `AbortController` huỷ ở 50s.
+3. Cả hai fail → `422` kèm `detail`. UI chuyển sang **dán transcript thủ công**
+   (`lib/transcript.ts` `parseTranscript`).
+
+`normalize()` chuẩn hoá về `{order_index, start_seconds, end_seconds, text_content}`.
+Không còn dùng `youtube-transcript` (bị chặn trên IP datacenter).
 
 ## Tạo bài (giáo viên)
 
