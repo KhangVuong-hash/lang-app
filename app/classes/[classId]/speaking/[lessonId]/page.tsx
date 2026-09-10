@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getClassAccess } from '@/lib/access';
 import ShadowingPlayer from '@/components/ShadowingPlayer';
+import ScriptManager from '@/components/ScriptManager';
 import PageHeader from '@/components/ui/PageHeader';
 
 export default async function SpeakingLessonPage({
@@ -40,6 +41,13 @@ export default async function SpeakingLessonPage({
         segments={(segments ?? []) as any}
         showRecorder={canRecord}
       />
+      {access.canManage && (
+        <ScriptManager
+          table="speaking_script_segments"
+          lessonId={params.lessonId}
+          initialSegments={(segments ?? []) as any}
+        />
+      )}
       {canRecord && (
         <p className="mt-4 text-xs text-ink-faint">
           Nghe từng câu, bấm <strong>Ghi âm</strong> để thu lại giọng đọc theo (shadowing) rồi

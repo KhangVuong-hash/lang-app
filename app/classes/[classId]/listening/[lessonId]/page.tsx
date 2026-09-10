@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getClassAccess } from '@/lib/access';
 import YouTubeScriptPlayer from '@/components/YouTubeScriptPlayer';
+import ScriptManager from '@/components/ScriptManager';
 import PageHeader from '@/components/ui/PageHeader';
 
 export default async function ListeningLessonPage({
@@ -34,7 +35,13 @@ export default async function ListeningLessonPage({
         title={lesson.title}
       />
       <YouTubeScriptPlayer videoId={lesson.youtube_video_id} segments={segments ?? []} />
-      {!access.canManage && (
+      {access.canManage ? (
+        <ScriptManager
+          table="listening_script_segments"
+          lessonId={params.lessonId}
+          initialSegments={(segments ?? []) as any}
+        />
+      ) : (
         <p className="mt-4 text-xs text-ink-faint">
           Mẹo: bấm <strong>Tua</strong> để nghe lại một câu, bấm <strong>Lặp</strong> để tự
           động lặp câu đó tới khi bạn tắt.

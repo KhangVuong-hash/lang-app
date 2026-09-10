@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { ScriptSegment } from '@/components/YouTubeScriptPlayer';
 import { extractYoutubeId } from '@/lib/youtube';
+import { parseTranscript } from '@/lib/transcript';
 
 export default function NewSpeakingLessonPage() {
   const { classId } = useParams<{ classId: string }>();
@@ -15,6 +16,7 @@ export default function NewSpeakingLessonPage() {
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [lang, setLang] = useState('');
   const [segments, setSegments] = useState<ScriptSegment[]>([]);
+  const [pasteText, setPasteText] = useState('');
   const [videoId, setVideoId] = useState<string | null>(null);
   const [fetching, setFetching] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -49,9 +51,21 @@ export default function NewSpeakingLessonPage() {
     setSegments((prev) => prev.map((s, i) => (i === idx ? { ...s, text_content: text } : s)));
   }
 
+  function applyPaste() {
+    const parsed = parseTranscript(pasteText);
+    if (!parsed.length) {
+      setError('Không nhận ra nội dung transcript để tách.');
+      return;
+    }
+    setSegments(parsed);
+    setPasteText('');
+    setError(null);
+  }
+
   async function handleSave() {
-    if (!videoId || !title.trim()) {
-      setError('Cần có tiêu đề và video hợp lệ.');
+    const vid = videoId ?? extractYoutubeId(youtubeUrl);
+    if (!vid || !title.trim()) {
+      setError('Cần có tiêu đề và URL YouTube hợp lệ.');
       return;
     }
     setSaving(true);
@@ -68,7 +82,7 @@ export default function NewSpeakingLessonPage() {
         title,
         source_url: youtubeUrl,
         source_type: 'youtube',
-        youtube_video_id: videoId,
+        youtube_video_id: vid,
         created_by: user?.id,
       })
       .select()
@@ -139,6 +153,30 @@ export default function NewSpeakingLessonPage() {
 
       <div className="card p-5">
         <h2 className="mb-2 font-display font-semibold">Script ({segments.length} câu)</h2>
+
+        <div className="mb-4 rounded-lg bg-paper p-3">
+          <label className="field-label">Dán transcript từ YouTube</label>
+          <p className="mb-2 text-xs text-ink-soft">
+            Dưới video bấm <strong>…</strong> → <strong>Hiển thị bản chép lời</strong>, sao
+            chép rồi dán vào đây (không có timestamp cũng được).
+          </p>
+          <textarea
+            value={pasteText}
+            onChange={(e) => setPasteText(e.target.value)}
+            rows={4}
+            className="textarea"
+            placeholder={'0:03\nyou could say I have to deal with a\n0:07\nlot of problems at work'}
+          />
+          <button
+            type="button"
+            onClick={applyPaste}
+            disabled={!pasteText.trim()}
+            className="btn-secondary btn-sm mt-2"
+          >
+            Tách thành câu
+          </button>
+        </div>
+
         <div className="max-h-96 space-y-2 overflow-y-auto">
           {segments.map((seg, idx) => (
             <div key={idx} className="flex items-start gap-2 rounded-lg border border-line p-2 text-sm">
@@ -156,7 +194,7 @@ export default function NewSpeakingLessonPage() {
 
       <button
         onClick={handleSave}
-        disabled={saving || !videoId}
+        disabled={saving || (!youtubeUrl.trim() || !title.trim())}
         className="btn w-full bg-success text-white hover:opacity-90"
       >
         {saving ? 'Đang lưu…' : 'Lưu bài học'}
