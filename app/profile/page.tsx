@@ -1,8 +1,8 @@
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import PageHeader from '@/components/ui/PageHeader';
 import LanguageCrest from '@/components/ui/LanguageCrest';
 import { ROLE_LABEL } from '@/lib/constants';
-import VocabGrammarNotebook from './VocabGrammarNotebook';
 
 function ClassList({ title, items }: { title: string; items: any[] }) {
   if (items.length === 0) return null;
@@ -27,26 +27,19 @@ export default async function ProfilePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: profile }, { data: teaching }, { data: enrollments }, { data: vocab }, { data: grammar }] =
-    await Promise.all([
-      supabase.from('profiles').select('*').eq('id', user?.id).single(),
-      supabase.from('classes').select('*, languages(name)').eq('teacher_id', user?.id).is('deleted_at', null),
-      supabase
-        .from('enrollments')
-        .select('classes(*, languages(name))')
-        .eq('student_id', user?.id)
-        .eq('status', 'active'),
-      supabase
-        .from('vocabulary_notes')
-        .select('*, classes(name)')
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('grammar_notes')
-        .select('*, classes(name)')
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false }),
-    ]);
+  const [{ data: profile }, { data: teaching }, { data: enrollments }] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', user?.id).maybeSingle(),
+    supabase
+      .from('classes')
+      .select('id, name, language_code')
+      .eq('teacher_id', user?.id)
+      .is('deleted_at', null),
+    supabase
+      .from('enrollments')
+      .select('classes(id, name, language_code)')
+      .eq('student_id', user?.id)
+      .eq('status', 'active'),
+  ]);
 
   const taught = teaching ?? [];
   const learning = (enrollments ?? []).map((e: any) => e.classes).filter(Boolean);
@@ -64,15 +57,14 @@ export default async function ProfilePage() {
         <ClassList title="Lớp tôi dạy" items={taught} />
         <ClassList title="Lớp tôi học" items={learning} />
         {allClasses.length === 0 && (
-          <div className="card p-5 text-sm text-ink-faint">
-            Bạn chưa dạy hay học lớp nào.
-          </div>
+          <div className="card p-5 text-sm text-ink-faint">Bạn chưa dạy hay học lớp nào.</div>
         )}
-        <VocabGrammarNotebook
-          vocab={vocab ?? []}
-          grammar={grammar ?? []}
-          classes={allClasses}
-        />
+        <Link href="/notebook" className="card card-hover flex items-center justify-between p-5">
+          <span className="font-display font-semibold text-ink">
+            📓 Sổ tay từ vựng &amp; ngữ pháp
+          </span>
+          <span className="text-sm text-brand">Mở →</span>
+        </Link>
       </div>
     </div>
   );

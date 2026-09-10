@@ -8,7 +8,7 @@ export default function Footer({ variant = 'public' }: { variant?: 'public' | 'a
       <footer className="border-t border-line bg-surface">
         <div className="container-page flex flex-col items-center justify-between gap-2 py-5 text-xs text-ink-faint sm:flex-row">
           <p>© {new Date().getFullYear()} BanThuApp - Học ngoại ngữ theo lớp</p>
-          <Link href="/profile" className="hover:text-ink">
+          <Link href="/notebook" className="hover:text-ink">
             Sổ tay từ vựng &amp; ngữ pháp
           </Link>
         </div>

@@ -10,7 +10,7 @@ import { ROLE_LABEL } from '@/lib/constants';
 function navFor(role: string) {
   const links = [
     { href: '/classes', label: 'Lớp học' },
-    { href: '/profile', label: 'Sổ tay' },
+    { href: '/notebook', label: 'Sổ tay' },
   ];
   if (role === 'admin') links.unshift({ href: '/admin', label: 'Quản trị' });
   return links;
@@ -51,7 +51,7 @@ export default function AppNav({
         <nav className="hidden items-center gap-1 md:flex">
           {links.map((l) => {
             const active =
-              pathname === l.href || (l.href !== '/profile' && pathname.startsWith(l.href));
+              pathname === l.href || pathname.startsWith(l.href + '/');
             return (
               <Link
                 key={l.href}
