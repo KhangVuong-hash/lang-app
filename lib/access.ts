@@ -35,7 +35,7 @@ export async function getClassAccess(classId: string): Promise<ClassAccess | nul
   if (!klass) return null;
 
   const [{ data: profile }, { data: enr }, { data: skillRows }] = await Promise.all([
-    supabase.from('profiles').select('role').eq('id', user.id).single(),
+    supabase.from('profiles').select('role').eq('id', user.id).maybeSingle(),
     supabase
       .from('enrollments')
       .select('id')

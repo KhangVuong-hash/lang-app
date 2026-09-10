@@ -13,7 +13,7 @@ export default async function HomePage() {
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
     redirect(profile?.role === 'admin' ? '/admin' : '/classes');
   }
 

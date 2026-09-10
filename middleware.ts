@@ -45,7 +45,7 @@ export async function middleware(request: NextRequest) {
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
     return NextResponse.redirect(new URL(homeFor(profile?.role), request.url));
   }
 
@@ -55,7 +55,7 @@ export async function middleware(request: NextRequest) {
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
     if (profile?.role !== 'admin') {
       return NextResponse.redirect(new URL('/classes', request.url));
     }
