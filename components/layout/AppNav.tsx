@@ -36,7 +36,7 @@ export default function AppNav({
   }, [pathname]);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-surface/95 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-line bg-surface shadow-sm">
       <div className="container-page flex h-16 items-center justify-between gap-3">
         <div className="flex items-center gap-4">
           <Logo />

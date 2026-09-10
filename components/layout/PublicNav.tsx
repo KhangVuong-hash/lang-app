@@ -32,13 +32,11 @@ export default function PublicNav() {
 
   return (
     <header
-      className={`sticky top-0 z-40 transition-colors ${
-        scrolled
-          ? 'border-b border-line bg-surface/95 shadow-card backdrop-blur'
-          : 'border-b border-transparent bg-paper/80 backdrop-blur'
+      className={`sticky top-0 z-40 border-b border-line bg-surface transition-shadow ${
+        scrolled ? 'shadow-card' : ''
       }`}
     >
-      <div className="container-page flex h-16 items-center justify-between gap-4">
+      <div className="container-page flex h-16 items-center justify-between gap-3">
         <Logo />
 
         <nav className="hidden items-center gap-1 md:flex">
@@ -64,16 +62,22 @@ export default function PublicNav() {
           </Link>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="grid h-10 w-10 place-items-center rounded-lg border border-line bg-surface md:hidden"
-          aria-label="Mở menu"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-          </svg>
-        </button>
+        {/* mobile: nút đăng nhập luôn hiện + hamburger */}
+        <div className="flex items-center gap-2 md:hidden">
+          <Link href="/login" className="btn-primary btn-sm">
+            Đăng nhập
+          </Link>
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="grid h-10 w-10 place-items-center rounded-lg border border-line bg-surface"
+            aria-label="Mở menu"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* mobile drawer */}
@@ -115,16 +119,16 @@ export default function PublicNav() {
               {l.label}
             </Link>
           ))}
-          <div className="mt-4 flex flex-col gap-2">
-            <Link href="/login" onClick={() => setOpen(false)} className="btn-primary">
-              Đăng nhập
-            </Link>
-            {SIGNUP_ENABLED && (
-              <Link href="/register" onClick={() => setOpen(false)} className="btn-secondary">
+          {SIGNUP_ENABLED && (
+            <div className="mt-4 flex flex-col gap-2">
+              <Link href="/register" onClick={() => setOpen(false)} className="btn-primary">
                 Bắt đầu miễn phí
               </Link>
-            )}
-          </div>
+              <Link href="/login" onClick={() => setOpen(false)} className="btn-secondary">
+                Đăng nhập
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </header>
