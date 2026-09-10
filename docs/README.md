@@ -14,3 +14,4 @@ Chia nhỏ theo chủ đề để dễ quản lý.
 ## Hạ tầng
 
 - [supabase-migration.md](supabase-migration.md) — chuyển schema.sql sang migration, bật tự đăng ký
+- [deployment.md](deployment.md) — checklist deploy lên Vercel + Supabase hosted

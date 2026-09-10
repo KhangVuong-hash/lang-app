@@ -24,7 +24,11 @@ export default function RegisterPage() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } }, // đọc bởi trigger handle_new_user
+      options: {
+        data: { full_name: fullName }, // đọc bởi trigger handle_new_user
+        emailRedirectTo:
+          typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined,
+      },
     });
 
     setLoading(false);
