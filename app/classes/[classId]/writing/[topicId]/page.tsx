@@ -20,5 +20,11 @@ export default async function WritingTopicPage({
       />
     );
   }
-  return <StudentWriteTopic classId={params.classId} topicId={params.topicId} />;
+  return (
+    <StudentWriteTopic
+      classId={params.classId}
+      topicId={params.topicId}
+      userId={access.userId}
+    />
+  );
 }

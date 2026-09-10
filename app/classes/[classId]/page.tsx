@@ -8,6 +8,7 @@ import LanguageCrest from '@/components/ui/LanguageCrest';
 import StatusPill from '@/components/ui/StatusPill';
 import EnrollStudentForm from './EnrollStudentForm';
 import DeleteResource from '@/components/DeleteResource';
+import CommentThread from '@/components/CommentThread';
 import { LANGUAGE_MAP } from '@/lib/constants';
 
 export default async function ClassOverview({ params }: { params: { classId: string } }) {
@@ -113,6 +114,12 @@ export default async function ClassOverview({ params }: { params: { classId: str
           </div>
         )}
       </div>
+
+      <CommentThread
+        classId={params.classId}
+        currentUserId={access.userId}
+        canModerate={canManage}
+      />
 
       {isTeacher && (
         <div className="mt-8 rounded-xl border border-danger/30 bg-danger/5 p-5">

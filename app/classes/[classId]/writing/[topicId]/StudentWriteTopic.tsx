@@ -4,13 +4,16 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Spinner from '@/components/ui/Spinner';
 import RouteLoading from '@/components/ui/RouteLoading';
+import CommentThread from '@/components/CommentThread';
 
 export default function StudentWriteTopic({
   classId,
   topicId,
+  userId,
 }: {
   classId: string;
   topicId: string;
+  userId: string;
 }) {
   const supabase = createClient();
 
@@ -134,6 +137,14 @@ export default function StudentWriteTopic({
           <p className="mt-1 whitespace-pre-wrap text-sm text-ink">{review.feedback}</p>
         </div>
       )}
+
+      <CommentThread
+        classId={classId}
+        subjectType="writing"
+        subjectId={topicId}
+        currentUserId={userId}
+        canModerate={false}
+      />
     </div>
   );
 }

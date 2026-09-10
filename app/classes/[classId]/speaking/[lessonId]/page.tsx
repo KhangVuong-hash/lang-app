@@ -6,6 +6,7 @@ import ShadowingPlayer from '@/components/ShadowingPlayer';
 import ScriptManager from '@/components/ScriptManager';
 import DeleteResource from '@/components/DeleteResource';
 import PageHeader from '@/components/ui/PageHeader';
+import CommentThread from '@/components/CommentThread';
 
 export default async function SpeakingLessonPage({
   params,
@@ -65,6 +66,14 @@ export default async function SpeakingLessonPage({
         table="speaking_script_segments"
         lessonId={params.lessonId}
         initialSegments={(segments ?? []) as any}
+      />
+
+      <CommentThread
+        classId={params.classId}
+        subjectType="speaking"
+        subjectId={params.lessonId}
+        currentUserId={access.userId}
+        canModerate={access.canManage}
       />
 
       {lesson.created_by === access.userId && (

@@ -5,6 +5,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import DeleteResource from '@/components/DeleteResource';
 import ReviewForm from './ReviewForm';
+import CommentThread from '@/components/CommentThread';
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   reviewed: { label: 'Đã chấm', cls: 'bg-success/10 text-success' },
@@ -80,6 +81,14 @@ export default async function TeacherTopicView({
           })}
         </div>
       )}
+
+      <CommentThread
+        classId={classId}
+        subjectType="writing"
+        subjectId={topicId}
+        currentUserId={userId}
+        canModerate
+      />
 
       {(topic.created_by ?? topic.teacher_id) === userId && (
         <div className="mt-8">

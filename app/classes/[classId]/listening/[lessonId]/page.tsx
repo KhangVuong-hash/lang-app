@@ -6,6 +6,7 @@ import YouTubeScriptPlayer from '@/components/YouTubeScriptPlayer';
 import ScriptManager from '@/components/ScriptManager';
 import DeleteResource from '@/components/DeleteResource';
 import PageHeader from '@/components/ui/PageHeader';
+import CommentThread from '@/components/CommentThread';
 
 export default async function ListeningLessonPage({
   params,
@@ -56,6 +57,14 @@ export default async function ListeningLessonPage({
         table="listening_script_segments"
         lessonId={params.lessonId}
         initialSegments={(segments ?? []) as any}
+      />
+
+      <CommentThread
+        classId={params.classId}
+        subjectType="listening"
+        subjectId={params.lessonId}
+        currentUserId={access.userId}
+        canModerate={access.canManage}
       />
 
       {lesson.created_by === access.userId && (
