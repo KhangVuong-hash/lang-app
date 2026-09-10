@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { NotebookPen, ChevronRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import PageHeader from '@/components/ui/PageHeader';
 import LanguageCrest from '@/components/ui/LanguageCrest';
@@ -60,10 +61,11 @@ export default async function ProfilePage() {
           <div className="card p-5 text-sm text-ink-faint">Bạn chưa dạy hay học lớp nào.</div>
         )}
         <Link href="/notebook" className="card card-hover flex items-center justify-between p-5">
-          <span className="font-display font-semibold text-ink">
-            📓 Sổ tay từ vựng &amp; ngữ pháp
+          <span className="flex items-center gap-2 font-display font-semibold text-ink">
+            <NotebookPen className="h-5 w-5 text-brand" />
+            Sổ tay từ vựng &amp; ngữ pháp
           </span>
-          <span className="text-sm text-brand">Mở →</span>
+          <ChevronRight className="h-5 w-5 text-ink-faint" />
         </Link>
       </div>
     </div>

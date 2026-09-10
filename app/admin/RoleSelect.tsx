@@ -1,25 +1,31 @@
 'use client';
 
+import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import SimpleSelect from '@/components/ui/SimpleSelect';
 
 export default function RoleSelect({ userId, currentRole }: { userId: string; currentRole: string }) {
   const supabase = createClient();
   const router = useRouter();
+  const [role, setRole] = useState(currentRole);
 
-  async function handleChange(role: string) {
-    await supabase.from('profiles').update({ role }).eq('id', userId);
+  async function handleChange(next: string) {
+    setRole(next);
+    await supabase.from('profiles').update({ role: next }).eq('id', userId);
     router.refresh();
   }
 
   return (
-    <select
-      defaultValue={currentRole}
-      onChange={(e) => handleChange(e.target.value)}
-      className="rounded-lg border border-line bg-surface px-2 py-1 text-xs text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-highlight/60"
-    >
-      <option value="user">Thành viên</option>
-      <option value="admin">Quản trị viên</option>
-    </select>
+    <SimpleSelect
+      value={role}
+      onChange={handleChange}
+      className="h-9 w-40 text-xs"
+      aria-label="Vai trò"
+      options={[
+        { value: 'user', label: 'Thành viên' },
+        { value: 'admin', label: 'Quản trị viên' },
+      ]}
+    />
   );
 }

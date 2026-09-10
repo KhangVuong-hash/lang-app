@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import PageHeader from '@/components/ui/PageHeader';
 import Spinner from '@/components/ui/Spinner';
+import SimpleSelect from '@/components/ui/SimpleSelect';
 
 export default function ClassEditForm({
   klass,
@@ -73,17 +74,12 @@ export default function ClassEditForm({
 
         <div>
           <label className="field-label">Ngôn ngữ</label>
-          <select
+          <SimpleSelect
             value={languageCode}
-            onChange={(e) => setLanguageCode(e.target.value)}
-            className="select"
-          >
-            {languages.map((l) => (
-              <option key={l.code} value={l.code}>
-                {l.name}
-              </option>
-            ))}
-          </select>
+            onChange={setLanguageCode}
+            options={languages.map((l) => ({ value: l.code, label: l.name }))}
+            placeholder="Chọn ngôn ngữ"
+          />
         </div>
 
         <div>

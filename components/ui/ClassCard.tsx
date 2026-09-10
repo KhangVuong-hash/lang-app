@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import LanguageCrest from './LanguageCrest';
 import { SKILLS, type SkillKey } from '@/lib/constants';
+import { SKILL_ICON } from '@/lib/skill-icons';
 
 export default function ClassCard({
   href,
@@ -30,17 +31,19 @@ export default function ClassCard({
           <div className="mt-3 flex gap-1.5">
             {SKILLS.map((s) => {
               const on = enabledSkills.includes(s.key);
+              const Icon = SKILL_ICON[s.key];
               return (
                 <span
                   key={s.key}
                   title={`${s.label}: ${on ? 'đang mở' : 'đang đóng'}`}
-                  className={`grid h-6 w-6 place-items-center rounded-md text-xs ${
-                    on ? '' : 'opacity-30 grayscale'
-                  }`}
+                  className="grid h-6 w-6 place-items-center rounded-md"
                   style={{ backgroundColor: on ? `${s.color}1A` : '#00000010' }}
                   aria-hidden
                 >
-                  {s.icon}
+                  <Icon
+                    className="h-3.5 w-3.5"
+                    style={{ color: on ? s.color : '#88A0A7' }}
+                  />
                 </span>
               );
             })}

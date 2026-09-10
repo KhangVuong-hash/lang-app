@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { SkipBack, Repeat } from 'lucide-react';
 import AudioRecorder from './AudioRecorder';
 import type { ScriptSegment } from './YouTubeScriptPlayer';
 
@@ -141,19 +142,19 @@ export default function ShadowingPlayer({
                 <div className="flex gap-1">
                   <button
                     onClick={() => seekToSegment(seg)}
-                    className="rounded-md border border-line px-2 py-1 text-xs hover:bg-paper"
+                    className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-xs hover:bg-paper"
                   >
-                    ⏮ Tua
+                    <SkipBack className="h-3 w-3" /> Tua
                   </button>
                   <button
                     onClick={() => toggleLoopOnSegment(seg)}
-                    className={`rounded-md border px-2 py-1 text-xs hover:bg-paper ${
+                    className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs hover:bg-paper ${
                       loopEnabled && loopSegmentRef.current?.order_index === seg.order_index
                         ? 'border-highlight-dark bg-highlight'
                         : 'border-line'
                     }`}
                   >
-                    🔁 Lặp
+                    <Repeat className="h-3 w-3" /> Lặp
                   </button>
                 </div>
                 {showRecorder && <AudioRecorder segmentId={seg.id} />}

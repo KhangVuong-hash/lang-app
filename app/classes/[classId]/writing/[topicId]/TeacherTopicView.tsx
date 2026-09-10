@@ -6,6 +6,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import DeleteResource from '@/components/DeleteResource';
 import ReviewForm from './ReviewForm';
 import CommentThread from '@/components/CommentThread';
+import { FileText } from 'lucide-react';
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   reviewed: { label: 'Đã chấm', cls: 'bg-success/10 text-success' },
@@ -63,7 +64,7 @@ export default async function TeacherTopicView({
       )}
 
       {list.length === 0 ? (
-        <EmptyState icon="📝" title="Chưa có học sinh nào nộp bài" />
+        <EmptyState icon={FileText} title="Chưa có học sinh nào nộp bài" />
       ) : (
         <div className="space-y-3">
           {list.map((s: any) => {

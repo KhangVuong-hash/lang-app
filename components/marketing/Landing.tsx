@@ -1,4 +1,13 @@
 import Link from 'next/link';
+import {
+  Layers,
+  Video,
+  PencilLine,
+  Globe,
+  Headphones,
+  Repeat,
+  SkipBack,
+} from 'lucide-react';
 import MarketingShell from '@/components/layout/MarketingShell';
 import SectionHeading from '@/components/ui/SectionHeading';
 import SkillIcon from '@/components/ui/SkillIcon';
@@ -95,13 +104,16 @@ function ScriptCardMock() {
   ];
   return (
     <div className="relative motion-safe:animate-rise-in">
-      <div className="absolute -left-4 -top-4 hidden rounded-2xl border border-line bg-surface px-3 py-2 text-xs font-medium text-ink-soft shadow-card sm:block">
-        🔁 Đang lặp câu #1
+      <div className="absolute -left-4 -top-4 hidden items-center gap-1.5 rounded-2xl border border-line bg-surface px-3 py-2 text-xs font-medium text-ink-soft shadow-card sm:flex">
+        <Repeat className="h-3.5 w-3.5" /> Đang lặp câu #1
       </div>
       <div className="card overflow-hidden shadow-lift">
         <div className="flex items-center gap-3 border-b border-line bg-paper px-4 py-3">
-          <span className="grid h-9 w-9 place-items-center rounded-lg bg-skill-listening/15 text-lg" aria-hidden>
-            🎧
+          <span
+            className="grid h-9 w-9 place-items-center rounded-lg bg-skill-listening/15 text-skill-listening"
+            aria-hidden
+          >
+            <Headphones className="h-4 w-4" />
           </span>
           <div>
             <p className="text-sm font-semibold text-ink">Bài 3 - Hỏi lại khi chưa nghe rõ</p>
@@ -120,15 +132,15 @@ function ScriptCardMock() {
               <p className="flex-1 leading-relaxed text-ink">{l.text}</p>
               <span className="flex gap-1 text-ink-faint">
                 <span className="grid h-6 w-6 place-items-center rounded-md border border-line" aria-hidden>
-                  ⏮
+                  <SkipBack className="h-3 w-3" />
                 </span>
                 <span
                   className={`grid h-6 w-6 place-items-center rounded-md border ${
-                    l.active ? 'border-highlight-dark bg-highlight' : 'border-line'
+                    l.active ? 'border-highlight-dark bg-highlight text-ink' : 'border-line'
                   }`}
                   aria-hidden
                 >
-                  🔁
+                  <Repeat className="h-3 w-3" />
                 </span>
               </span>
             </li>
@@ -150,19 +162,17 @@ function ScriptCardMock() {
 
 function UspBar() {
   const items = [
-    { icon: '◐', title: 'Đủ bốn kỹ năng', desc: 'Nghe, Nói, Viết, Đọc trong cùng một lớp' },
-    { icon: '▷', title: 'Video thật', desc: 'Script tự cắt theo câu, tua & lặp từng câu' },
-    { icon: '✎', title: 'Giáo viên theo sát', desc: 'Giao bài, chấm và nhận xét từng học sinh' },
-    { icon: '⬡', title: 'Đa ngôn ngữ', desc: 'Anh - Trung - Nhật - Hàn, mở rộng dần' },
+    { Icon: Layers, title: 'Đủ bốn kỹ năng', desc: 'Nghe, Nói, Viết, Đọc trong cùng một lớp' },
+    { Icon: Video, title: 'Video thật', desc: 'Script tự cắt theo câu, tua & lặp từng câu' },
+    { Icon: PencilLine, title: 'Giáo viên theo sát', desc: 'Giao bài, chấm và nhận xét từng học sinh' },
+    { Icon: Globe, title: 'Đa ngôn ngữ', desc: 'Anh - Trung - Nhật - Hàn, mở rộng dần' },
   ];
   return (
     <section className="border-y border-line bg-surface">
       <div className="container-page grid gap-x-8 gap-y-6 py-8 sm:grid-cols-2 lg:grid-cols-4">
         {items.map((it) => (
           <div key={it.title} className="flex gap-3">
-            <span className="text-xl text-brand-light" aria-hidden>
-              {it.icon}
-            </span>
+            <it.Icon className="h-5 w-5 shrink-0 text-brand-light" aria-hidden />
             <div>
               <p className="font-semibold text-ink">{it.title}</p>
               <p className="text-sm text-ink-soft">{it.desc}</p>

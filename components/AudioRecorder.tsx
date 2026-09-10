@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { Mic, Square } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 export default function AudioRecorder({
@@ -66,17 +67,17 @@ export default function AudioRecorder({
       {!recording ? (
         <button
           onClick={startRecording}
-          className="rounded-md border border-line px-2 py-1 text-xs hover:bg-paper"
+          className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-xs hover:bg-paper"
           title="Ghi âm shadowing câu này"
         >
-          🎙 Ghi âm
+          <Mic className="h-3 w-3" /> Ghi âm
         </button>
       ) : (
         <button
           onClick={stopRecording}
-          className="rounded-md border border-danger/50 bg-danger/10 px-2 py-1 text-xs text-danger"
+          className="inline-flex items-center gap-1 rounded-md border border-danger/50 bg-danger/10 px-2 py-1 text-xs text-danger"
         >
-          ⏹ Dừng
+          <Square className="h-3 w-3" /> Dừng
         </button>
       )}
       {uploading && <span className="text-xs text-ink-faint">Đang lưu...</span>}

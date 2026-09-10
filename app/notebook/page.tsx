@@ -45,7 +45,11 @@ export default async function NotebookPage() {
 
   return (
     <div className="container-page max-w-3xl py-8">
-      <PageHeader eyebrow="Sổ tay" title="Từ vựng &amp; ngữ pháp" mark={false} />
+      <PageHeader
+        back={{ href: '/profile', label: 'Trang cá nhân' }}
+        eyebrow="Sổ tay"
+        title="Từ vựng và ngữ pháp"
+      />
       <Notebook
         classes={[...classMap.values()]}
         initialVocab={vocab ?? []}

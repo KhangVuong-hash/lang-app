@@ -35,7 +35,7 @@ export default async function ListeningLessonPage({
     <div className="container-page max-w-6xl py-8">
       <PageHeader
         back={{ href: `/classes/${params.classId}/listening`, label: 'Bài nghe' }}
-        eyebrow="🎧 Kỹ năng Nghe"
+        eyebrow="Kỹ năng Nghe"
         title={lesson.title}
       >
         <Link

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { MailCheck } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import AuthShell from '@/components/layout/AuthShell';
 import Spinner from '@/components/ui/Spinner';
@@ -49,8 +50,11 @@ export default function RegisterPage() {
     return (
       <AuthShell>
         <div className="card max-w-sm p-6 text-center shadow-card">
-          <span className="text-3xl" aria-hidden>
-            ✉️
+          <span
+            className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-brand/10 text-brand"
+            aria-hidden
+          >
+            <MailCheck className="h-6 w-6" />
           </span>
           <h1 className="mt-2 text-lg font-bold">Kiểm tra email của bạn</h1>
           <p className="mt-1 text-sm text-ink-soft">

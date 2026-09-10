@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Logo from './Logo';
 import { SKILLS, LANGUAGES, SIGNUP_ENABLED } from '@/lib/constants';
+import { SKILL_ICON } from '@/lib/skill-icons';
 
 export default function Footer({ variant = 'public' }: { variant?: 'public' | 'app' }) {
   if (variant === 'app') {
@@ -29,12 +30,15 @@ export default function Footer({ variant = 'public' }: { variant?: 'public' | 'a
 
         <nav className="space-y-2 text-sm">
           <p className="font-display font-semibold text-ink">Bốn kỹ năng</p>
-          {SKILLS.map((s) => (
-            <p key={s.key} className="text-ink-soft">
-              <span aria-hidden>{s.icon}</span> {s.label}
-              {s.comingSoon && <span className="text-ink-faint"> - sắp có</span>}
-            </p>
-          ))}
+          {SKILLS.map((s) => {
+            const Icon = SKILL_ICON[s.key];
+            return (
+              <p key={s.key} className="flex items-center gap-1.5 text-ink-soft">
+                <Icon className="h-4 w-4 shrink-0" /> {s.label}
+                {s.comingSoon && <span className="text-ink-faint"> - sắp có</span>}
+              </p>
+            );
+          })}
         </nav>
 
         <nav className="space-y-2 text-sm">

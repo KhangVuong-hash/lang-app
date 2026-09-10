@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { BookMarked, SpellCheck } from 'lucide-react';
 import Spinner from '@/components/ui/Spinner';
 import ConfirmButton from '@/components/ui/ConfirmButton';
+import SimpleSelect from '@/components/ui/SimpleSelect';
 
 type Cls = { id: string; name: string; language_code: string };
 type Kind = 'vocab' | 'grammar';
@@ -15,7 +17,7 @@ const CFG = {
     desc: 'meaning',
     namePh: 'Từ mới',
     descPh: 'Nghĩa',
-    icon: '📘',
+    Icon: BookMarked,
     label: 'Từ vựng',
   },
   grammar: {
@@ -24,7 +26,7 @@ const CFG = {
     desc: 'explanation',
     namePh: 'Điểm ngữ pháp',
     descPh: 'Giải thích',
-    icon: '📗',
+    Icon: SpellCheck,
     label: 'Ngữ pháp',
   },
 } as const;
@@ -209,33 +211,34 @@ export default function Notebook({
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="inline-flex rounded-lg bg-paper p-1">
-          {(['vocab', 'grammar'] as Kind[]).map((k) => (
-            <button
-              key={k}
-              onClick={() => setTab(k)}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-                tab === k ? 'bg-surface text-ink shadow-card' : 'text-ink-soft'
-              }`}
-            >
-              {CFG[k].icon} {CFG[k].label}
-            </button>
-          ))}
+          {(['vocab', 'grammar'] as Kind[]).map((k) => {
+            const I = CFG[k].Icon;
+            return (
+              <button
+                key={k}
+                onClick={() => setTab(k)}
+                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium ${
+                  tab === k ? 'bg-surface text-ink shadow-card' : 'text-ink-soft'
+                }`}
+              >
+                <I className="h-4 w-4" />
+                {CFG[k].label}
+              </button>
+            );
+          })}
         </div>
 
-        <select
+        <SimpleSelect
           value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="select w-auto"
-          title="Lọc theo lớp"
-        >
-          <option value={ALL}>Tất cả lớp</option>
-          <option value={NONE}>Không gắn lớp</option>
-          {classes.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+          onChange={setFilter}
+          className="w-auto min-w-[10rem]"
+          aria-label="Lọc theo lớp"
+          options={[
+            { value: ALL, label: 'Tất cả lớp' },
+            { value: NONE, label: 'Không gắn lớp' },
+            ...classes.map((c) => ({ value: c.id, label: c.name })),
+          ]}
+        />
       </div>
 
       <div className="mt-4 grid gap-2 rounded-lg bg-paper p-3 sm:grid-cols-2">
@@ -257,14 +260,15 @@ export default function Notebook({
           placeholder="Câu ví dụ"
           className="input sm:col-span-2"
         />
-        <select value={classId} onChange={(e) => setClassId(e.target.value)} className="select">
-          <option value="">Không gắn lớp</option>
-          {classes.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+        <SimpleSelect
+          value={classId}
+          onChange={setClassId}
+          aria-label="Gắn lớp"
+          options={[
+            { value: '', label: 'Không gắn lớp' },
+            ...classes.map((c) => ({ value: c.id, label: c.name })),
+          ]}
+        />
         <button onClick={add} disabled={!name.trim() || saving} className="btn-primary">
           {saving && <Spinner />}
           Thêm {cfg.label.toLowerCase()}
@@ -296,18 +300,15 @@ export default function Notebook({
                   className="input sm:col-span-2"
                   placeholder="Câu ví dụ"
                 />
-                <select
+                <SimpleSelect
                   value={edit.classId}
-                  onChange={(e) => setEdit({ ...edit, classId: e.target.value })}
-                  className="select"
-                >
-                  <option value="">Không gắn lớp</option>
-                  {classes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(v) => setEdit({ ...edit, classId: v })}
+                  aria-label="Gắn lớp"
+                  options={[
+                    { value: '', label: 'Không gắn lớp' },
+                    ...classes.map((c) => ({ value: c.id, label: c.name })),
+                  ]}
+                />
               </div>
               <div className="mt-2 flex gap-2">
                 <button onClick={() => saveEdit(it.id)} className="btn-primary btn-sm">

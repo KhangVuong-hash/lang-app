@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { SkipBack, Repeat } from 'lucide-react';
 
 export type ScriptSegment = {
   id?: string;
@@ -148,8 +149,8 @@ export default function YouTubeScriptPlayer({
             </button>
           ))}
           {loopEnabled && (
-            <span className="pill ml-auto bg-highlight-soft text-ink">
-              🔁 Đang lặp câu #{(loopSegmentRef.current?.order_index ?? 0) + 1}
+            <span className="pill ml-auto inline-flex items-center gap-1 bg-highlight-soft text-ink">
+              <Repeat className="h-3 w-3" /> Đang lặp câu #{(loopSegmentRef.current?.order_index ?? 0) + 1}
             </span>
           )}
         </div>
@@ -176,20 +177,20 @@ export default function YouTubeScriptPlayer({
                 <button
                   title="Tua lại đoạn này"
                   onClick={() => replaySegment(seg)}
-                  className="rounded-md border border-line px-2 py-1 text-xs hover:bg-paper"
+                  className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-xs hover:bg-paper"
                 >
-                  ⏮ Tua
+                  <SkipBack className="h-3 w-3" /> Tua
                 </button>
                 <button
                   title="Lặp lại liên tục đoạn này"
                   onClick={() => toggleLoopOnSegment(seg)}
-                  className={`rounded-md border px-2 py-1 text-xs hover:bg-paper ${
+                  className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs hover:bg-paper ${
                     loopEnabled && loopSegmentRef.current?.order_index === seg.order_index
                       ? 'border-highlight-dark bg-highlight'
                       : 'border-line'
                   }`}
                 >
-                  🔁 Lặp
+                  <Repeat className="h-3 w-3" /> Lặp
                 </button>
               </div>
             </li>

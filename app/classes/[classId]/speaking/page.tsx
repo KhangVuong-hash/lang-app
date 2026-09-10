@@ -5,6 +5,7 @@ import { getClassAccess } from '@/lib/access';
 import PageHeader from '@/components/ui/PageHeader';
 import LessonRow from '@/components/ui/LessonRow';
 import EmptyState from '@/components/ui/EmptyState';
+import { Mic } from 'lucide-react';
 
 export default async function SpeakingListPage({ params }: { params: { classId: string } }) {
   const access = await getClassAccess(params.classId);
@@ -25,7 +26,7 @@ export default async function SpeakingListPage({ params }: { params: { classId: 
     <div className="container-page py-8">
       <PageHeader
         back={{ href: base, label: 'Tổng quan lớp' }}
-        eyebrow="🗣️ Kỹ năng Nói"
+        eyebrow="Kỹ năng Nói"
         title="Bài shadowing"
       >
         {access.canManage && (
@@ -37,7 +38,7 @@ export default async function SpeakingListPage({ params }: { params: { classId: 
 
       {list.length === 0 ? (
         <EmptyState
-          icon="🗣️"
+          icon={Mic}
           title="Chưa có bài shadowing nào"
           hint={
             access.canManage

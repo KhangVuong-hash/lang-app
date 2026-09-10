@@ -5,6 +5,7 @@ import { getClassAccess } from '@/lib/access';
 import PageHeader from '@/components/ui/PageHeader';
 import LessonRow from '@/components/ui/LessonRow';
 import EmptyState from '@/components/ui/EmptyState';
+import { Headphones } from 'lucide-react';
 
 export default async function ListeningListPage({ params }: { params: { classId: string } }) {
   const access = await getClassAccess(params.classId);
@@ -25,7 +26,7 @@ export default async function ListeningListPage({ params }: { params: { classId:
     <div className="container-page py-8">
       <PageHeader
         back={{ href: base, label: 'Tổng quan lớp' }}
-        eyebrow="🎧 Kỹ năng Nghe"
+        eyebrow="Kỹ năng Nghe"
         title="Bài nghe"
       >
         {access.canManage && (
@@ -37,7 +38,7 @@ export default async function ListeningListPage({ params }: { params: { classId:
 
       {list.length === 0 ? (
         <EmptyState
-          icon="🎧"
+          icon={Headphones}
           title="Chưa có bài nghe nào"
           hint={
             access.canManage

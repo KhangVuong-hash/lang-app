@@ -38,7 +38,7 @@ export default async function SpeakingLessonPage({
     <div className="container-page max-w-6xl py-8">
       <PageHeader
         back={{ href: `/classes/${params.classId}/speaking`, label: 'Bài shadowing' }}
-        eyebrow="🗣️ Kỹ năng Nói"
+        eyebrow="Kỹ năng Nói"
         title={lesson.title}
       >
         <Link

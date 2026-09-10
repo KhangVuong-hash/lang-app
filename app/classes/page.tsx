@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import PageHeader from '@/components/ui/PageHeader';
 import ClassCard from '@/components/ui/ClassCard';
 import EmptyState from '@/components/ui/EmptyState';
+import { BookOpen } from 'lucide-react';
 import LanguageCrest from '@/components/ui/LanguageCrest';
 import InviteResponse from './InviteResponse';
 import { LANGUAGE_MAP, type SkillKey } from '@/lib/constants';
@@ -119,7 +120,7 @@ export default async function ClassesDashboard() {
 
       {nothing && (
         <EmptyState
-          icon="📚"
+          icon={BookOpen}
           title="Bạn chưa có lớp nào"
           hint="Tạo một lớp để bắt đầu dạy, hoặc gửi email tài khoản này cho giáo viên để được mời vào lớp."
         >

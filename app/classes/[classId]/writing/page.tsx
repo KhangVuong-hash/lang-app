@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getClassAccess } from '@/lib/access';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
+import { PenLine } from 'lucide-react';
 
 export default async function WritingListPage({ params }: { params: { classId: string } }) {
   const access = await getClassAccess(params.classId);
@@ -24,7 +25,7 @@ export default async function WritingListPage({ params }: { params: { classId: s
     <div className="container-page py-8">
       <PageHeader
         back={{ href: base, label: 'Tổng quan lớp' }}
-        eyebrow="✍️ Kỹ năng Viết"
+        eyebrow="Kỹ năng Viết"
         title="Chủ đề viết"
       >
         {access.canManage && (
@@ -36,7 +37,7 @@ export default async function WritingListPage({ params }: { params: { classId: s
 
       {list.length === 0 ? (
         <EmptyState
-          icon="✍️"
+          icon={PenLine}
           title="Chưa có chủ đề viết nào"
           hint={
             access.canManage
