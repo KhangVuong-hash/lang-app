@@ -14,9 +14,11 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 export default async function TeacherTopicView({
   classId,
   topicId,
+  userId,
 }: {
   classId: string;
   topicId: string;
+  userId: string;
 }) {
   const supabase = createClient();
 
@@ -71,15 +73,17 @@ export default async function TeacherTopicView({
         </div>
       )}
 
-      <div className="mt-8">
-        <DeleteResource
-          table="writing_topics"
-          id={topicId}
-          redirectTo={`/classes/${classId}/writing`}
-          label="Xoá chủ đề này"
-          question="Xoá chủ đề và toàn bộ bài nộp, nhận xét? Không hoàn tác được."
-        />
-      </div>
+      {(topic.created_by ?? topic.teacher_id) === userId && (
+        <div className="mt-8">
+          <DeleteResource
+            table="writing_topics"
+            id={topicId}
+            redirectTo={`/classes/${classId}/writing`}
+            label="Xoá chủ đề này"
+            question="Xoá chủ đề này? Dữ liệu vẫn lưu lại nhưng không còn hiển thị."
+          />
+        </div>
+      )}
     </div>
   );
 }

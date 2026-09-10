@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Logo from './Logo';
-import { SKILLS, LANGUAGES } from '@/lib/constants';
+import { SKILLS, LANGUAGES, SIGNUP_ENABLED } from '@/lib/constants';
 
 export default function Footer({ variant = 'public' }: { variant?: 'public' | 'app' }) {
   if (variant === 'app') {
@@ -52,9 +52,11 @@ export default function Footer({ variant = 'public' }: { variant?: 'public' | 'a
           <a href="mailto:hotro@BanThuApp.vn" className="block text-ink-soft hover:text-ink">
             hotro@BanThuApp.vn
           </a>
-          <Link href="/register" className="block text-ink-soft hover:text-ink">
-            Tạo tài khoản học sinh
-          </Link>
+          {SIGNUP_ENABLED && (
+            <Link href="/register" className="block text-ink-soft hover:text-ink">
+              Tạo tài khoản học sinh
+            </Link>
+          )}
           <Link href="/login" className="block text-ink-soft hover:text-ink">
             Đăng nhập
           </Link>

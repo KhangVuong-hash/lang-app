@@ -68,6 +68,12 @@ export const LANGUAGE_MAP: Record<string, Language> = Object.fromEntries(
   LANGUAGES.map((l) => [l.code, l])
 );
 
+/**
+ * Tạm ẩn đăng ký công khai — tài khoản được tạo tay trong Supabase.
+ * Đặt lại `true` để mở lại trang/nút đăng ký.
+ */
+export const SIGNUP_ENABLED = false;
+
 export const ROLE_LABEL: Record<string, string> = {
   admin: 'Quản trị viên',
   user: 'Thành viên',

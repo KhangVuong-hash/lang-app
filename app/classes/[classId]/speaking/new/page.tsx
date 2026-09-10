@@ -115,6 +115,7 @@ export default function NewSpeakingLessonPage() {
     }
 
     setSaving(false);
+    router.refresh();
     router.push(`/classes/${classId}/speaking/${lesson.id}`);
   }
 
@@ -125,7 +126,7 @@ export default function NewSpeakingLessonPage() {
 
       <div className="card space-y-3 p-5">
         <div>
-          <label className="field-label">Tiêu đề</label>
+          <label className="field-label">Tiêu đề <span className="text-danger">*</span></label>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}

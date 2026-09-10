@@ -12,7 +12,13 @@ export default async function WritingTopicPage({
   if (!access?.canView) notFound();
 
   if (access.canManage) {
-    return <TeacherTopicView classId={params.classId} topicId={params.topicId} />;
+    return (
+      <TeacherTopicView
+        classId={params.classId}
+        topicId={params.topicId}
+        userId={access.userId}
+      />
+    );
   }
   return <StudentWriteTopic classId={params.classId} topicId={params.topicId} />;
 }

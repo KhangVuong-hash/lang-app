@@ -44,15 +44,17 @@ export default async function ListeningLessonPage({
             lessonId={params.lessonId}
             initialSegments={(segments ?? []) as any}
           />
-          <div className="mt-6">
-            <DeleteResource
-              table="listening_lessons"
-              id={params.lessonId}
-              redirectTo={`/classes/${params.classId}/listening`}
-              label="Xoá bài nghe này"
-              question="Xoá bài nghe và toàn bộ script? Không hoàn tác được."
-            />
-          </div>
+          {lesson.created_by === access.userId && (
+            <div className="mt-6">
+              <DeleteResource
+                table="listening_lessons"
+                id={params.lessonId}
+                redirectTo={`/classes/${params.classId}/listening`}
+                label="Xoá bài nghe này"
+                question="Xoá bài nghe này? Dữ liệu vẫn lưu lại nhưng không còn hiển thị."
+              />
+            </div>
+          )}
         </>
       ) : (
         <p className="mt-4 text-xs text-ink-faint">

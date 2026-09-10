@@ -29,6 +29,10 @@ export default function NewClassPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!name.trim()) {
+      setError('Vui lòng nhập tên lớp.');
+      return;
+    }
     setSaving(true);
     setError(null);
 
@@ -38,7 +42,14 @@ export default function NewClassPage() {
 
     const { data, error } = await supabase
       .from('classes')
-      .insert({ teacher_id: user?.id, name, language_code: languageCode, level, description })
+      .insert({
+        teacher_id: user?.id,
+        created_by: user?.id,
+        name: name.trim(),
+        language_code: languageCode,
+        level,
+        description,
+      })
       .select()
       .single();
 
@@ -47,6 +58,7 @@ export default function NewClassPage() {
       setError(error.message);
       return;
     }
+    router.refresh();
     router.push(`/classes/${data.id}`);
   }
 
@@ -56,7 +68,7 @@ export default function NewClassPage() {
 
       <form onSubmit={handleSubmit} className="card space-y-4 p-5">
         <div>
-          <label className="field-label">Tên lớp</label>
+          <label className="field-label">Tên lớp <span className="text-danger">*</span></label>
           <input
             required
             value={name}

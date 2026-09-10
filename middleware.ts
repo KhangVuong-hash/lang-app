@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { SIGNUP_ENABLED } from '@/lib/constants';
 
 /** đích điều hướng sau khi đăng nhập theo role */
 function homeFor(role: string | undefined) {
@@ -8,6 +9,11 @@ function homeFor(role: string | undefined) {
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request: { headers: request.headers } });
+
+  // Đăng ký công khai đang tắt -> chặn /register
+  if (!SIGNUP_ENABLED && request.nextUrl.pathname.startsWith('/register')) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

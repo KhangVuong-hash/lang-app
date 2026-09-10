@@ -31,6 +31,7 @@ export default function NewWritingTopicPage() {
       .insert({
         class_id: classId,
         teacher_id: user?.id,
+        created_by: user?.id,
         topic_type: topicType,
         title,
         prompt: topicType === 'essay' ? prompt : null,
@@ -44,6 +45,7 @@ export default function NewWritingTopicPage() {
       setError(error.message);
       return;
     }
+    router.refresh();
     router.push(`/classes/${classId}/writing/${data.id}`);
   }
 
@@ -71,7 +73,7 @@ export default function NewWritingTopicPage() {
         </div>
 
         <div>
-          <label className="field-label">Tiêu đề</label>
+          <label className="field-label">Tiêu đề <span className="text-danger">*</span></label>
           <input required value={title} onChange={(e) => setTitle(e.target.value)} className="input" />
         </div>
 

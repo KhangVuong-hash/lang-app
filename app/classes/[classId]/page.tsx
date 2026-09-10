@@ -101,11 +101,12 @@ export default async function ClassOverview({ params }: { params: { classId: str
         )}
       </div>
 
-      {canManage && (
+      {isTeacher && (
         <div className="mt-8 rounded-xl border border-danger/30 bg-danger/5 p-5">
           <h2 className="font-display text-sm font-semibold text-ink">Vùng nguy hiểm</h2>
           <p className="mt-1 text-sm text-ink-soft">
-            Xoá lớp sẽ xoá toàn bộ bài học, bài nộp và thành viên của lớp.
+            Chỉ bạn (người tạo lớp) mới xoá được. Xoá lớp sẽ ẩn toàn bộ bài học, bài nộp và
+            thành viên (dữ liệu vẫn lưu lại).
           </p>
           <div className="mt-3">
             <DeleteResource

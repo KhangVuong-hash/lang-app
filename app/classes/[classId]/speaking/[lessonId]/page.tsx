@@ -50,15 +50,17 @@ export default async function SpeakingLessonPage({
             lessonId={params.lessonId}
             initialSegments={(segments ?? []) as any}
           />
-          <div className="mt-6">
-            <DeleteResource
-              table="speaking_lessons"
-              id={params.lessonId}
-              redirectTo={`/classes/${params.classId}/speaking`}
-              label="Xoá bài shadowing này"
-              question="Xoá bài shadowing và toàn bộ script? Không hoàn tác được."
-            />
-          </div>
+          {lesson.created_by === access.userId && (
+            <div className="mt-6">
+              <DeleteResource
+                table="speaking_lessons"
+                id={params.lessonId}
+                redirectTo={`/classes/${params.classId}/speaking`}
+                label="Xoá bài shadowing này"
+                question="Xoá bài shadowing này? Dữ liệu vẫn lưu lại nhưng không còn hiển thị."
+              />
+            </div>
+          )}
         </>
       )}
       {canRecord && (

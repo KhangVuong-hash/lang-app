@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Logo from './Logo';
+import { SIGNUP_ENABLED } from '@/lib/constants';
 
 const LINKS = [
   { href: '/#tinh-nang', label: 'Tính năng' },
@@ -53,11 +54,13 @@ export default function PublicNav() {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
-          <Link href="/login" className="btn-ghost">
-            Đăng nhập
-          </Link>
-          <Link href="/register" className="btn-primary">
-            Bắt đầu miễn phí
+          {SIGNUP_ENABLED && (
+            <Link href="/login" className="btn-ghost">
+              Đăng nhập
+            </Link>
+          )}
+          <Link href={SIGNUP_ENABLED ? '/register' : '/login'} className="btn-primary">
+            {SIGNUP_ENABLED ? 'Bắt đầu miễn phí' : 'Đăng nhập'}
           </Link>
         </div>
 
@@ -113,12 +116,14 @@ export default function PublicNav() {
             </Link>
           ))}
           <div className="mt-4 flex flex-col gap-2">
-            <Link href="/login" onClick={() => setOpen(false)} className="btn-secondary">
+            <Link href="/login" onClick={() => setOpen(false)} className="btn-primary">
               Đăng nhập
             </Link>
-            <Link href="/register" onClick={() => setOpen(false)} className="btn-primary">
-              Bắt đầu miễn phí
-            </Link>
+            {SIGNUP_ENABLED && (
+              <Link href="/register" onClick={() => setOpen(false)} className="btn-secondary">
+                Bắt đầu miễn phí
+              </Link>
+            )}
           </div>
         </div>
       </div>

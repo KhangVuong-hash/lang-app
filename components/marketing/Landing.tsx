@@ -2,7 +2,7 @@ import Link from 'next/link';
 import MarketingShell from '@/components/layout/MarketingShell';
 import SectionHeading from '@/components/ui/SectionHeading';
 import SkillIcon from '@/components/ui/SkillIcon';
-import { SKILLS, LANGUAGES } from '@/lib/constants';
+import { SKILLS, LANGUAGES, SIGNUP_ENABLED } from '@/lib/constants';
 
 export default function Landing() {
   return (
@@ -41,12 +41,14 @@ function Hero() {
             theo dõi tiến độ.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/register" className="btn-primary">
-              Bắt đầu miễn phí
+            <Link href="/login" className="btn-primary">
+              {SIGNUP_ENABLED ? 'Bắt đầu miễn phí' : 'Đăng nhập'}
             </Link>
-            <Link href="/register" className="btn-secondary">
-              Tôi là giáo viên
-            </Link>
+            {SIGNUP_ENABLED && (
+              <Link href="/register" className="btn-secondary">
+                Tôi là giáo viên
+              </Link>
+            )}
           </div>
           <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-ink-faint">
             <span>Đang hỗ trợ:</span>
@@ -250,8 +252,11 @@ function TeacherBanner() {
             từng học sinh - không mất phí.
           </p>
         </div>
-        <Link href="/register" className="btn bg-ink text-white hover:bg-ink/90">
-          Tạo lớp học
+        <Link
+          href={SIGNUP_ENABLED ? '/register' : '/login'}
+          className="btn bg-ink text-white hover:bg-ink/90"
+        >
+          {SIGNUP_ENABLED ? 'Tạo lớp học' : 'Đăng nhập'}
         </Link>
       </div>
     </section>
@@ -346,14 +351,17 @@ function FinalCta() {
           Sẵn sàng cho câu đầu tiên?
         </h2>
         <p className="mx-auto mt-3 max-w-lg text-ink-soft">
-          Tạo tài khoản miễn phí và nhờ giáo viên thêm bạn vào lớp, hoặc tự mở lớp của riêng
-          mình.
+          {SIGNUP_ENABLED
+            ? 'Tạo tài khoản miễn phí và nhờ giáo viên thêm bạn vào lớp, hoặc tự mở lớp của riêng mình.'
+            : 'Đăng nhập bằng tài khoản được cấp để vào lớp học của bạn.'}
         </p>
         <div className="mt-7 flex justify-center gap-3">
-          <Link href="/register" className="btn-primary">
-            Bắt đầu miễn phí
-          </Link>
-          <Link href="/login" className="btn-secondary">
+          {SIGNUP_ENABLED && (
+            <Link href="/register" className="btn-primary">
+              Bắt đầu miễn phí
+            </Link>
+          )}
+          <Link href="/login" className={SIGNUP_ENABLED ? 'btn-secondary' : 'btn-primary'}>
             Đăng nhập
           </Link>
         </div>

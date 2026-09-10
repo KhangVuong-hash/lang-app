@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import AuthShell from '@/components/layout/AuthShell';
 import Spinner from '@/components/ui/Spinner';
+import { SIGNUP_ENABLED } from '@/lib/constants';
 
 export default function LoginPage() {
   const supabase = createClient();
@@ -65,12 +66,14 @@ export default function LoginPage() {
           {loading ? 'Đang đăng nhập…' : 'Đăng nhập'}
         </button>
 
-        <p className="text-center text-sm text-ink-soft">
-          Chưa có tài khoản?{' '}
-          <Link href="/register" className="font-medium text-brand hover:underline">
-            Đăng ký
-          </Link>
-        </p>
+        {SIGNUP_ENABLED && (
+          <p className="text-center text-sm text-ink-soft">
+            Chưa có tài khoản?{' '}
+            <Link href="/register" className="font-medium text-brand hover:underline">
+              Đăng ký
+            </Link>
+          </p>
+        )}
       </form>
     </AuthShell>
   );
