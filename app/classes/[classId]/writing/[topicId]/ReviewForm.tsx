@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import Spinner from '@/components/ui/Spinner';
 
 export default function ReviewForm({
   submissionId,
@@ -56,6 +57,7 @@ export default function ReviewForm({
         />
       </div>
       <button onClick={handleSave} disabled={saving} className="btn-primary btn-sm">
+        {saving && <Spinner />}
         {saving ? 'Đang lưu…' : 'Lưu nhận xét'}
       </button>
     </div>

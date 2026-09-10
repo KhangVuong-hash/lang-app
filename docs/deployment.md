@@ -32,8 +32,9 @@ Project Settings → Environment Variables (áp cho Production + Preview + Devel
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref>.supabase.co` | công khai |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon key (hosted) | công khai |
 | `SUPABASE_SERVICE_ROLE_KEY` | service_role key (hosted) | **bí mật**, không prefix `NEXT_PUBLIC` |
+| `GEMINI_API_KEY` | key free ở [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | tuỳ chọn — bật "Lấy script tự động" từ URL YouTube; free tier ~1500 lần/ngày. Không có key thì chỉ còn dán transcript thủ công. |
 
-> Không dùng lại key trong `.env` local — đó là key của Supabase local demo.
+> Không dùng lại key trong `.env` local - đó là key của Supabase local demo.
 
 ## 4. Import repo vào Vercel
 
@@ -50,11 +51,13 @@ Project Settings → Environment Variables (áp cho Production + Preview + Devel
 
 ## Lưu ý
 
-- **`youtube-transcript`** cào phụ đề public của YouTube. Trên IP datacenter của Vercel,
-  YouTube có thể chặn/hạn chế → tính năng "Lấy script tự động" đôi khi lỗi. UI luôn có lối
-  thoát: nhập script thủ công. Nếu cần ổn định, cân nhắc chuyển API này sang một provider
-  transcript có key.
-- Middleware chạy trên Edge Runtime — `@supabase/ssr` tương thích, không cần chỉnh.
+- **Lấy script tự động**: `POST /api/youtube/transcript` thử theo thứ tự
+  (1) Gemini nếu có `GEMINI_API_KEY` — nhận thẳng URL YouTube, ổn định trên Vercel;
+  (2) cào phụ đề `youtube-transcript` — hay bị YouTube chặn từ IP datacenter.
+  Nếu cả hai fail, giáo viên **dán transcript** từ YouTube ("Hiển thị bản chép lời") vào ô
+  có sẵn ở trang tạo/sửa bài. Video dài (>20 phút) qua Gemini có thể mất 20-40s và tốn
+  nhiều token — cân nhắc dùng clip ngắn.
+- Middleware chạy trên Edge Runtime - `@supabase/ssr` tương thích, không cần chỉnh.
 - Chưa có route cho giáo viên nghe lại bài ghi âm của học sinh (bucket private). Cần thêm
-  route tạo signed URL bằng service role — xem
+  route tạo signed URL bằng service role - xem
   [architecture/skills-listening-speaking.md](architecture/skills-listening-speaking.md).

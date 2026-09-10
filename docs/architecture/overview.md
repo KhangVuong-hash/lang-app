@@ -2,9 +2,9 @@
 
 ## Stack
 
-- **Next.js 14.2** — App Router, React Server Components mặc định
-- **Tailwind CSS 3.4** — token tuỳ chỉnh trong `tailwind.config.js`
-- **Supabase** — Postgres + Auth + Storage; `@supabase/ssr` cho session qua cookie
+- **Next.js 14.2** - App Router, React Server Components mặc định
+- **Tailwind CSS 3.4** - token tuỳ chỉnh trong `tailwind.config.js`
+- **Supabase** - Postgres + Auth + Storage; `@supabase/ssr` cho session qua cookie
 - **TypeScript**, package manager **pnpm**
 - `youtube-transcript` (không chính thức) để lấy phụ đề YouTube
 
@@ -21,11 +21,11 @@ app/
     new/                  tạo lớp
     [classId]/
       layout.tsx          guard canView (getClassAccess)
-      page.tsx            tổng quan lớp — adaptive theo isTeacher / isEnrolled
+      page.tsx            tổng quan lớp - adaptive theo isTeacher / isEnrolled
       listening|speaking|writing/
-        page.tsx          danh sách — nút "Tạo" chỉ hiện khi canManage
+        page.tsx          danh sách - nút "Tạo" chỉ hiện khi canManage
         new/layout.tsx    guard canManage
-        [lessonId]/[topicId] — player / editor, adaptive
+        [lessonId]/[topicId] - player / editor, adaptive
   admin/  profile/         layout.tsx bọc AppShell
   api/
     youtube/transcript/   POST: URL → segments
@@ -43,7 +43,7 @@ lib/
   access.ts               getClassAccess(classId) → quyền của user với 1 lớp
   supabase/client.ts      browser client (anon key)
   supabase/server.ts      server client (anon key, đọc cookie)
-  supabase/admin.ts       service-role client — CHỈ trong Route Handler
+  supabase/admin.ts       service-role client - CHỈ trong Route Handler
   youtube.ts              extractYoutubeId
 
 middleware.ts             refresh session + điều hướng theo role

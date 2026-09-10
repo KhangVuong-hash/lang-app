@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { getClassAccess } from '@/lib/access';
 
 export default async function ClassScopeLayout({
@@ -10,6 +10,7 @@ export default async function ClassScopeLayout({
   params: { classId: string };
 }) {
   const access = await getClassAccess(params.classId);
+  if (access?.isInvited && !access.canView) redirect('/classes');
   if (!access?.canView) notFound();
   return <>{children}</>;
 }

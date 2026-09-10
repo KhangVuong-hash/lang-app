@@ -10,6 +10,8 @@ export type ClassAccess = {
   isTeacher: boolean;
   /** là học sinh đang active của lớp này */
   isEnrolled: boolean;
+  /** đã được mời nhưng chưa đồng ý tham gia */
+  isInvited: boolean;
   /** được phép quản lý (tạo/sửa bài, thêm học sinh) */
   canManage: boolean;
   /** được phép xem nội dung lớp */
@@ -38,17 +40,17 @@ export async function getClassAccess(classId: string): Promise<ClassAccess | nul
     supabase.from('profiles').select('role').eq('id', user.id).maybeSingle(),
     supabase
       .from('enrollments')
-      .select('id')
+      .select('status')
       .eq('class_id', classId)
       .eq('student_id', user.id)
-      .eq('status', 'active')
       .maybeSingle(),
     supabase.from('class_skills').select('skill_type, is_enabled').eq('class_id', classId),
   ]);
 
   const isAdmin = profile?.role === 'admin';
   const isTeacher = klass.teacher_id === user.id;
-  const isEnrolled = !!enr;
+  const isEnrolled = enr?.status === 'active';
+  const isInvited = enr?.status === 'invited';
   const canManage = isTeacher || isAdmin;
 
   return {
@@ -60,6 +62,7 @@ export async function getClassAccess(classId: string): Promise<ClassAccess | nul
     isAdmin,
     isTeacher,
     isEnrolled,
+    isInvited,
     canManage,
     canView: canManage || isEnrolled,
   };

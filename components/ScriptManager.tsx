@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { parseTranscript, type ParsedSegment } from '@/lib/transcript';
+import Spinner from '@/components/ui/Spinner';
 
 type Seg = ParsedSegment;
 
@@ -103,7 +104,7 @@ export default function ScriptManager({
         <label className="field-label">Dán transcript từ YouTube</label>
         <p className="mb-2 text-xs text-ink-soft">
           Dưới video YouTube bấm <strong>…</strong> → <strong>Hiển thị bản chép lời</strong>,
-          chọn hết, sao chép rồi dán vào đây. Không có timestamp cũng được — hệ thống sẽ tách
+          chọn hết, sao chép rồi dán vào đây. Không có timestamp cũng được - hệ thống sẽ tách
           theo câu.
         </p>
         <textarea
@@ -181,6 +182,7 @@ export default function ScriptManager({
           + Thêm dòng
         </button>
         <button type="button" onClick={save} disabled={saving} className="btn-primary btn-sm">
+          {saving && <Spinner />}
           {saving ? 'Đang lưu…' : 'Lưu script'}
         </button>
         {msg && <span className="text-xs text-ink-soft">{msg}</span>}

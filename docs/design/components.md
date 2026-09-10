@@ -2,12 +2,12 @@
 
 ## Nền tảng design system
 
-- `tailwind.config.js` — token màu, font, shadow, keyframe `rise-in` / `loop-pulse`
-- `app/globals.css` — `@layer base` (nền, heading, focus), `@layer components`
+- `tailwind.config.js` - token màu, font, shadow, keyframe `rise-in` / `loop-pulse`
+- `app/globals.css` - `@layer base` (nền, heading, focus), `@layer components`
   (`.btn-*`, `.card`, `.input`, `.field-label`, `.pill`, `.mark`, `.container-page`),
   khối `prefers-reduced-motion`
-- `app/layout.tsx` — nạp Space Grotesk + Be Vietnam Pro qua `next/font`
-- `lib/constants.ts` — `SKILLS`, `LANGUAGES`, `ROLE_LABEL` + map tra cứu
+- `app/layout.tsx` - nạp Space Grotesk + Be Vietnam Pro qua `next/font`
+- `lib/constants.ts` - `SKILLS`, `LANGUAGES`, `ROLE_LABEL` + map tra cứu
 
 ## Layout (`components/layout/`)
 
@@ -15,8 +15,8 @@
 |---|---|
 | `Logo.tsx` | Logo + mark bong bóng SVG (tone `ink` / `light`) |
 | `TopBar.tsx` | Thanh mảnh trên cùng (`public` / `app`) |
-| `PublicNav.tsx` | Navbar landing — sticky, đổi nền khi scroll, drawer mobile (client) |
-| `AppNav.tsx` | Navbar sau đăng nhập — menu theo role, badge role, active state (client) |
+| `PublicNav.tsx` | Navbar landing - sticky, đổi nền khi scroll, drawer mobile (client) |
+| `AppNav.tsx` | Navbar sau đăng nhập - menu theo role, badge role, active state (client) |
 | `UserMenu.tsx` | Avatar + dropdown, `supabase.auth.signOut()` (client) |
 | `Footer.tsx` | Footer 4 cột (`public`) / rút gọn (`app`) |
 | `MarketingShell.tsx` / `AppShell.tsx` / `AuthShell.tsx` | 3 khung trang |
@@ -37,7 +37,7 @@
 
 ## Marketing
 
-- `components/marketing/Landing.tsx` — toàn bộ landing (Hero, UspBar, SkillsSection,
+- `components/marketing/Landing.tsx` - toàn bộ landing (Hero, UspBar, SkillsSection,
   LanguagesBand, TeacherBanner, HowItWorks, Testimonials, FinalCta) trong một file
 
 ## Trang (giữ nguyên logic nghiệp vụ)

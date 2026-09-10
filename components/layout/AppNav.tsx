@@ -20,10 +20,12 @@ export default function AppNav({
   name,
   role,
   avatarUrl,
+  inviteCount = 0,
 }: {
   name: string;
   role: string;
   avatarUrl?: string | null;
+  inviteCount?: number;
 }) {
   const pathname = usePathname();
   const links = navFor(role);
@@ -54,11 +56,16 @@ export default function AppNav({
               <Link
                 key={l.href}
                 href={l.href}
-                className={`rounded-md px-3 py-2 text-sm font-medium ${
+                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium ${
                   active ? 'bg-brand/10 text-brand' : 'text-ink-soft hover:bg-black/5 hover:text-ink'
                 }`}
               >
                 {l.label}
+                {l.href === '/classes' && inviteCount > 0 && (
+                  <span className="grid h-5 min-w-[1.25rem] place-items-center rounded-full bg-skill-speaking px-1 text-xs font-semibold text-white">
+                    {inviteCount}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -86,9 +93,14 @@ export default function AppNav({
             <Link
               key={l.href}
               href={l.href}
-              className="block rounded-lg px-3 py-2.5 text-sm font-medium text-ink-soft hover:bg-black/5 hover:text-ink"
+              className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium text-ink-soft hover:bg-black/5 hover:text-ink"
             >
               {l.label}
+              {l.href === '/classes' && inviteCount > 0 && (
+                <span className="grid h-5 min-w-[1.25rem] place-items-center rounded-full bg-skill-speaking px-1 text-xs font-semibold text-white">
+                  {inviteCount}
+                </span>
+              )}
             </Link>
           ))}
         </nav>

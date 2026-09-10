@@ -29,7 +29,7 @@ function Hero() {
         <div className="lg:col-span-7">
           <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-xs font-medium text-ink-soft">
             <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden />
-            Anh · Trung · Nhật · Hàn — học theo lớp
+            Anh · Trung · Nhật · Hàn - học 
           </p>
           <h1 className="font-display text-4xl font-bold leading-[1.05] sm:text-5xl">
             Học một ngoại ngữ mới,{' '}
@@ -37,7 +37,7 @@ function Hero() {
           </h1>
           <p className="mt-5 max-w-xl text-lg text-ink-soft">
             LangApp ghép bạn vào lớp học của một giáo viên thật. Bạn luyện đủ bốn kỹ năng
-            Nghe, Nói, Viết, Đọc trên chính những video và bài tập giáo viên giao — và được
+            Nghe, Nói, Viết, Đọc trên chính những video và bài tập giáo viên giao - và được
             theo dõi tiến độ.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
@@ -102,7 +102,7 @@ function ScriptCardMock() {
             🎧
           </span>
           <div>
-            <p className="text-sm font-semibold text-ink">Bài 3 — Hỏi lại khi chưa nghe rõ</p>
+            <p className="text-sm font-semibold text-ink">Bài 3 - Hỏi lại khi chưa nghe rõ</p>
             <p className="text-xs text-ink-faint">Tiếng Anh · Sơ–trung cấp</p>
           </div>
         </div>
@@ -151,7 +151,7 @@ function UspBar() {
     { icon: '◐', title: 'Đủ bốn kỹ năng', desc: 'Nghe, Nói, Viết, Đọc trong cùng một lớp' },
     { icon: '▷', title: 'Video thật', desc: 'Script tự cắt theo câu, tua & lặp từng câu' },
     { icon: '✎', title: 'Giáo viên theo sát', desc: 'Giao bài, chấm và nhận xét từng học sinh' },
-    { icon: '⬡', title: 'Đa ngôn ngữ', desc: 'Anh — Trung — Nhật — Hàn, mở rộng dần' },
+    { icon: '⬡', title: 'Đa ngôn ngữ', desc: 'Anh - Trung - Nhật - Hàn, mở rộng dần' },
   ];
   return (
     <section className="border-y border-line bg-surface">
@@ -247,7 +247,7 @@ function TeacherBanner() {
           <h2 className="text-2xl font-bold text-ink">Bạn là giáo viên?</h2>
           <p className="mt-1 max-w-xl text-ink/80">
             Tạo lớp, dán link YouTube để hệ thống tự cắt script, giao bài viết và theo dõi
-            từng học sinh — không mất phí.
+            từng học sinh - không mất phí.
           </p>
         </div>
         <Link href="/register" className="btn bg-ink text-white hover:bg-ink/90">
@@ -327,7 +327,7 @@ function Testimonials() {
             </div>
             <figcaption className="text-sm">
               <span className="font-semibold text-ink">{it.name}</span>
-              <span className="text-ink-faint"> — {it.role}</span>
+              <span className="text-ink-faint"> - {it.role}</span>
             </figcaption>
           </figure>
         ))}

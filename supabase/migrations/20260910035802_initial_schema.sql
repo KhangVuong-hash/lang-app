@@ -1,9 +1,9 @@
 -- ============================================================
--- LANGUAGE LEARNING APP — SUPABASE SCHEMA (initial migration)
+-- LANGUAGE LEARNING APP - SUPABASE SCHEMA (initial migration)
 -- ============================================================
 -- Review pass fixes:
 --   * RLS bật cho MỌI bảng public (trước đây thiếu `languages`)
---   * writing_reviews: thêm UNIQUE(submission_id) — app dùng upsert onConflict
+--   * writing_reviews: thêm UNIQUE(submission_id) - app dùng upsert onConflict
 --   * writing_submissions: thêm policy cho giáo viên UPDATE (đổi status -> reviewed)
 --   * mọi SECURITY DEFINER function: set search_path = '' + schema-qualify
 --   * mọi policy: giới hạn `to authenticated` (toàn app nằm sau đăng nhập)
@@ -195,7 +195,7 @@ create table writing_reviews (
   score numeric,
   inline_comments jsonb,
   created_at timestamptz default now(),
-  unique (submission_id) -- 1 review / submission — app dùng upsert onConflict: 'submission_id'
+  unique (submission_id) -- 1 review / submission - app dùng upsert onConflict: 'submission_id'
 );
 
 -- ---------- 7. VOCAB / GRAMMAR NOTEBOOK ----------
@@ -296,7 +296,7 @@ as $$
   );
 $$;
 
--- LANGUAGES (bảng tham chiếu — ai đăng nhập cũng đọc được, không ai ghi được qua API)
+-- LANGUAGES (bảng tham chiếu - ai đăng nhập cũng đọc được, không ai ghi được qua API)
 create policy "languages: read" on languages for select
   to authenticated using (true);
 

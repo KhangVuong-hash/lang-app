@@ -8,7 +8,7 @@ CSS variable, map vào Tailwind `fontFamily`.
 | Vai trò | Font | Lý do |
 |---|---|---|
 | Heading (`font-display`) | **Space Grotesk** | Grotesk có nét riêng ở a/g, không phải Inter/Poppins nhàm, không phải serif tương phản cao |
-| Body / UI (`font-sans`) | **Be Vietnam Pro** | Foundry Việt, bộ dấu tiếng Việt chuẩn — chọn có chủ đích theo đối tượng người dùng |
+| Body / UI (`font-sans`) | **Be Vietnam Pro** | Foundry Việt, bộ dấu tiếng Việt chuẩn - chọn có chủ đích theo đối tượng người dùng |
 
 `h1..h5` tự động nhận `font-display` qua `@layer base` trong `globals.css`.
 
@@ -25,7 +25,7 @@ nhận được.
 | H3 (tiêu đề thẻ) | `text-lg` | 600 | |
 | Body | `text-base` (16px) | 400 | `leading` mặc định ~1.6 |
 | Body nhỏ | `text-sm` | 400 | |
-| Caption | `text-xs` | 500 | sentence-case, màu `ink-faint` — **không** ALL-CAPS tracking rộng |
+| Caption | `text-xs` | 500 | sentence-case, màu `ink-faint` - **không** ALL-CAPS tracking rộng |
 
 ## Lưu ý môi trường
 

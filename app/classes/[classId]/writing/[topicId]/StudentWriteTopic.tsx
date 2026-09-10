@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import Spinner from '@/components/ui/Spinner';
 
 export default function StudentWriteTopic({
   classId,
@@ -108,6 +109,7 @@ export default function StudentWriteTopic({
             disabled={saving}
             className="btn bg-success text-white hover:opacity-90"
           >
+            {saving && <Spinner />}
             Nộp bài
           </button>
         </div>

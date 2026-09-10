@@ -1,7 +1,7 @@
-# LangApp — Nền tảng học ngoại ngữ (Next.js + Supabase)
+# LangApp - Nền tảng học ngoại ngữ (Next.js + Supabase)
 
-Ứng dụng học ngoại ngữ đa ngôn ngữ (Anh, Trung, Nhật, Hàn — mở rộng được) với 3 vai trò
-**Admin / Giáo viên / Học sinh**, lớp học gồm 4 kỹ năng (Nghe, Nói, Viết, Đọc — Đọc tạm đóng),
+Ứng dụng học ngoại ngữ đa ngôn ngữ (Anh, Trung, Nhật, Hàn - mở rộng được) với 3 vai trò
+**Admin / Giáo viên / Học sinh**, lớp học gồm 4 kỹ năng (Nghe, Nói, Viết, Đọc - Đọc tạm đóng),
 và sổ tay Từ vựng/Ngữ pháp cá nhân.
 
 ## Điểm nhấn: Kỹ năng Nghe & Nói
@@ -11,7 +11,7 @@ và sổ tay Từ vựng/Ngữ pháp cá nhân.
 - Giáo viên có thể **sửa lại text từng câu**, thêm/xoá dòng thủ công nếu video không có phụ đề.
 - Học sinh xem bài học với video nhúng (YouTube IFrame API) + danh sách script bên cạnh:
   - Nút **⏮ Tua**: nhảy video về đầu câu đó và phát.
-  - Nút **🔁 Lặp**: tự động lặp lại đúng câu đó liên tục cho tới khi tắt — dùng để luyện nghe kỹ.
+  - Nút **🔁 Lặp**: tự động lặp lại đúng câu đó liên tục cho tới khi tắt - dùng để luyện nghe kỹ.
   - Chỉnh tốc độ phát (0.5x–1.25x).
 - Kỹ năng Nói dùng lại cơ chế script y hệt Nghe, cộng thêm nút **🎙 Ghi âm** để học sinh
   thu lại giọng đọc theo (shadowing) từng câu, lưu vào Supabase Storage.
@@ -25,39 +25,39 @@ và sổ tay Từ vựng/Ngữ pháp cá nhân.
 
 ```
 app/
-  login/                          — đăng nhập
-  admin/                          — quản lý user, đổi role
+  login/                          - đăng nhập
+  admin/                          - quản lý user, đổi role
   teacher/
-    page.tsx                      — dashboard: danh sách lớp đang dạy
-    classes/new/                  — tạo lớp (chọn ngôn ngữ tự do)
+    page.tsx                      - dashboard: danh sách lớp đang dạy
+    classes/new/                  - tạo lớp (chọn ngôn ngữ tự do)
     classes/[classId]/
-      page.tsx                    — tổng quan lớp, bật/tắt 4 kỹ năng
-      listening/                  — CRUD bài nghe + auto-transcript
-      speaking/                   — CRUD bài shadowing + auto-transcript
-      writing/                    — tạo chủ đề viết/dịch, xem & review bài nộp
+      page.tsx                    - tổng quan lớp, bật/tắt 4 kỹ năng
+      listening/                  - CRUD bài nghe + auto-transcript
+      speaking/                   - CRUD bài shadowing + auto-transcript
+      writing/                    - tạo chủ đề viết/dịch, xem & review bài nộp
   student/
-    page.tsx                      — dashboard: danh sách lớp đang học
+    page.tsx                      - dashboard: danh sách lớp đang học
     classes/[classId]/
-      listening/[lessonId]/       — học nghe (player + script + tua/lặp)
-      speaking/[lessonId]/        — luyện shadowing (player + ghi âm)
-      writing/[topicId]/          — viết bài / dịch + xem feedback
-  profile/                        — trang cá nhân: lớp học + sổ tay từ vựng/ngữ pháp
+      listening/[lessonId]/       - học nghe (player + script + tua/lặp)
+      speaking/[lessonId]/        - luyện shadowing (player + ghi âm)
+      writing/[topicId]/          - viết bài / dịch + xem feedback
+  profile/                        - trang cá nhân: lớp học + sổ tay từ vựng/ngữ pháp
 
-app/api/youtube/transcript/route.ts  — API tự động lấy transcript YouTube
+app/api/youtube/transcript/route.ts  - API tự động lấy transcript YouTube
 
 components/
-  YouTubeScriptPlayer.tsx         — player dùng cho kỹ năng Nghe
-  ShadowingPlayer.tsx             — player + ghi âm dùng cho kỹ năng Nói
-  AudioRecorder.tsx               — ghi âm MediaRecorder + upload Storage
+  YouTubeScriptPlayer.tsx         - player dùng cho kỹ năng Nghe
+  ShadowingPlayer.tsx             - player + ghi âm dùng cho kỹ năng Nói
+  AudioRecorder.tsx               - ghi âm MediaRecorder + upload Storage
 
 lib/
-  supabase/client.ts              — Supabase client phía trình duyệt
-  supabase/server.ts              — Supabase client phía server (Server Components)
-  youtube.ts                      — helper trích xuất video ID
+  supabase/client.ts              - Supabase client phía trình duyệt
+  supabase/server.ts              - Supabase client phía server (Server Components)
+  youtube.ts                      - helper trích xuất video ID
 
-middleware.ts                     — refresh session + điều hướng theo role
+middleware.ts                     - refresh session + điều hướng theo role
 
-supabase/schema.sql               — TOÀN BỘ schema + RLS policies + storage policies
+supabase/schema.sql               - TOÀN BỘ schema + RLS policies + storage policies
 ```
 
 ## Cài đặt
@@ -93,22 +93,22 @@ Mở http://localhost:3000
 
 ## Những phần cần hoàn thiện tiếp (gợi ý roadmap)
 
-1. **Nghe giáo viên nghe lại bài ghi âm của học sinh** — cần route lấy signed URL từ
+1. **Nghe giáo viên nghe lại bài ghi âm của học sinh** - cần route lấy signed URL từ
    Supabase Storage (service role) vì bucket đang private theo user. (`lib/supabase/admin.ts`
    đã có sẵn client service-role để bạn viết tiếp route này theo mẫu `enroll-student`.)
-2. **Kỹ năng Đọc** — đã có `class_skills.reading` (mặc định tắt) và bảng để mở rộng sau.
-3. **Toggle bật/tắt kỹ năng theo lớp** — hiện DB đã có `class_skills.is_enabled`,
+2. **Kỹ năng Đọc** - đã có `class_skills.reading` (mặc định tắt) và bảng để mở rộng sau.
+3. **Toggle bật/tắt kỹ năng ** - hiện DB đã có `class_skills.is_enabled`,
    cần thêm UI switch trong trang tổng quan lớp cho giáo viên.
 4. **Thông báo / email** khi có bài nộp mới, có feedback mới, v.v.
-5. **Quên mật khẩu** — Supabase có sẵn `resetPasswordForEmail`, chỉ cần thêm 1 trang form.
+5. **Quên mật khẩu** - Supabase có sẵn `resetPasswordForEmail`, chỉ cần thêm 1 trang form.
 
 ### Đã hoàn thành trong bản cập nhật này
-- ✅ `app/page.tsx` — trang chủ tự động redirect theo trạng thái đăng nhập & role.
-- ✅ `app/register/page.tsx` — đăng ký tài khoản mới (mặc định role `student`).
+- ✅ `app/page.tsx` - trang chủ tự động redirect theo trạng thái đăng nhập & role.
+- ✅ `app/register/page.tsx` - đăng ký tài khoản mới (mặc định role `student`).
 - ✅ Mời/thêm học sinh vào lớp bằng email: `app/api/enroll-student/route.ts` +
   `EnrollStudentForm.tsx` trong trang tổng quan lớp của giáo viên. Route này dùng
   `SUPABASE_SERVICE_ROLE_KEY` để tra cứu tài khoản theo email (auth.users không lộ qua anon key),
   tự kiểm tra người gọi đúng là giáo viên của lớp trước khi ghi dữ liệu.
 
-> ⚠️ Nhớ điền `SUPABASE_SERVICE_ROLE_KEY` trong `.env.local` (khác với anon key) — key này
+> ⚠️ Nhớ điền `SUPABASE_SERVICE_ROLE_KEY` trong `.env.local` (khác với anon key) - key này
 > **không được lộ ra client**, chỉ dùng trong Route Handlers như đã làm ở `enroll-student`.

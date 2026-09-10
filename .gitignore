@@ -6,7 +6,7 @@ node_modules
 next-env.d.ts
 *.tsbuildinfo
 
-# env — chỉ commit .env.example
+# env - chỉ commit .env.example
 .env
 .env*.local
 

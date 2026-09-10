@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Spinner from '@/components/ui/Spinner';
 
 export default function EnrollStudentForm({ classId }: { classId: string }) {
   const router = useRouter();
@@ -26,7 +27,7 @@ export default function EnrollStudentForm({ classId }: { classId: string }) {
       setMessage({ type: 'error', text: data.error });
       return;
     }
-    setMessage({ type: 'success', text: `Đã thêm ${data.studentName} vào lớp.` });
+    setMessage({ type: 'success', text: `Đã gửi lời mời tới ${data.studentName}.` });
     setEmail('');
     router.refresh();
   }
@@ -43,7 +44,8 @@ export default function EnrollStudentForm({ classId }: { classId: string }) {
           className="input sm:flex-1"
         />
         <button disabled={loading} className="btn-primary shrink-0">
-          {loading ? 'Đang thêm…' : 'Thêm học sinh'}
+          {loading && <Spinner />}
+          {loading ? 'Đang mời…' : 'Mời học sinh'}
         </button>
       </div>
       {message && (

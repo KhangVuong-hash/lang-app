@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import PageHeader from '@/components/ui/PageHeader';
+import Spinner from '@/components/ui/Spinner';
 
 export default function NewClassPage() {
   const router = useRouter();
@@ -61,7 +62,7 @@ export default function NewClassPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="input"
-            placeholder="VD: Tiếng Nhật N4 — Lớp tối T2/T4"
+            placeholder="VD: Tiếng Nhật N4 - Lớp tối T2/T4"
           />
         </div>
 
@@ -103,6 +104,7 @@ export default function NewClassPage() {
         {error && <p className="text-sm text-danger">{error}</p>}
 
         <button disabled={saving} className="btn-primary w-full">
+          {saving && <Spinner />}
           {saving ? 'Đang tạo…' : 'Tạo lớp'}
         </button>
       </form>

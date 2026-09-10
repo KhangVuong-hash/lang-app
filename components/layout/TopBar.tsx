@@ -4,7 +4,7 @@ export default function TopBar({ variant = 'public' }: { variant?: 'public' | 'a
       <div className="container-page flex h-9 items-center justify-between text-xs">
         <p className="hidden truncate sm:block">
           {variant === 'public'
-            ? 'Học ngoại ngữ theo lớp — Nghe · Nói · Viết · Đọc'
+            ? 'Học ngoại ngữ - Nghe · Nói · Viết · Đọc'
             : 'Chúc bạn một buổi học hiệu quả'}
         </p>
         <div className="flex items-center gap-3">

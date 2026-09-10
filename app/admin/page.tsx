@@ -35,7 +35,7 @@ export default async function AdminPage() {
             <tbody className="divide-y divide-line">
               {(users ?? []).map((u) => (
                 <tr key={u.id}>
-                  <td className="py-2.5 text-ink">{u.full_name ?? '—'}</td>
+                  <td className="py-2.5 text-ink">{u.full_name ?? '-'}</td>
                   <td className="py-2.5">
                     <RoleSelect userId={u.id} currentRole={u.role} />
                   </td>
@@ -58,7 +58,7 @@ export default async function AdminPage() {
                 <p className="font-medium text-ink">{c.name}</p>
                 <p className="text-xs text-ink-faint">
                   {LANGUAGE_MAP[c.language_code]?.name ?? c.languages?.name} · GV:{' '}
-                  {c.profiles?.full_name ?? '—'}
+                  {c.profiles?.full_name ?? '-'}
                 </p>
               </div>
             </li>

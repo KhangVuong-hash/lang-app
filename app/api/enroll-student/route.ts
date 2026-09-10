@@ -60,13 +60,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Bạn là giáo viên của lớp này' }, { status: 400 });
   }
 
-  // 4. Thêm vào enrollments (dùng admin client để chắc chắn ghi được, đã tự kiểm tra quyền ở bước 1)
-  const { error: insertError } = await admin
+  // 4. Không mời lại người đã là thành viên
+  const { data: existing } = await admin
     .from('enrollments')
-    .upsert(
-      { class_id: classId, student_id: foundUser.id, status: 'active' },
-      { onConflict: 'class_id,student_id' }
-    );
+    .select('status')
+    .eq('class_id', classId)
+    .eq('student_id', foundUser.id)
+    .maybeSingle();
+
+  if (existing?.status === 'active') {
+    return NextResponse.json({ error: 'Học sinh này đã ở trong lớp' }, { status: 400 });
+  }
+
+  // 5. Tạo/đặt lại lời mời (status='invited'); học sinh phải tự bấm "Tham gia"
+  const { error: insertError } = await admin.from('enrollments').upsert(
+    { class_id: classId, student_id: foundUser.id, status: 'invited' },
+    { onConflict: 'class_id,student_id' }
+  );
 
   if (insertError) {
     return NextResponse.json({ error: insertError.message }, { status: 500 });

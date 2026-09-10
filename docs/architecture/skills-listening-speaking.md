@@ -1,6 +1,6 @@
 # Kỹ năng Nghe & Nói (cơ chế cốt lõi)
 
-## Lấy script từ YouTube — `POST /api/youtube/transcript`
+## Lấy script từ YouTube - `POST /api/youtube/transcript`
 
 - Nhận `{ youtubeUrl, lang? }`. `extractYoutubeId` → video ID.
 - `YoutubeTranscript.fetchTranscript(videoId, { lang })` lấy phụ đề public timedtext.
@@ -9,7 +9,7 @@
 - Lỗi (video không phụ đề / private / YouTube đổi cấu trúc) → trả `422` kèm thông điệp; UI
   luôn có lối thoát: giáo viên nhập / sửa script thủ công.
 
-`youtube-transcript` là thư viện **không chính thức** — coi như best-effort.
+`youtube-transcript` là thư viện **không chính thức** - coi như best-effort.
 
 ## Tạo bài (giáo viên)
 

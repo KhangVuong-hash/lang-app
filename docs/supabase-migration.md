@@ -24,7 +24,7 @@ chuyển sang migration chuẩn của Supabase CLI.
 
 - `[auth] enable_signup = true`
 - `[auth.email] enable_signup = true`
-- `[auth.email] enable_confirmations = false` — `signUp` trả session ngay
+- `[auth.email] enable_confirmations = false` - `signUp` trả session ngay
 - `site_url` / `additional_redirect_urls` trỏ `http://localhost:3000`
 
 Project **hosted**: Dashboard → Authentication → Providers → Email: bật Email provider, tắt
@@ -32,5 +32,5 @@ Project **hosted**: Dashboard → Authentication → Providers → Email: bật 
 
 ## Lưu ý
 
-Phần cuối migration tạo policy trên `storage.objects` + insert `storage.buckets` — chạy qua
+Phần cuối migration tạo policy trên `storage.objects` + insert `storage.buckets` - chạy qua
 `supabase db push` thì OK (role `postgres`).

@@ -1,11 +1,11 @@
 # Xác thực & phân quyền
 
-## Mô hình role — chỉ 2 role
+## Mô hình role - chỉ 2 role
 
 `user_role` enum = `('admin', 'user')`.
 
-- **admin** — quản trị hệ thống (`/admin`): xem mọi người dùng/lớp, đổi role.
-- **user** — thành viên thường. Một user **vừa có thể dạy vừa có thể học**:
+- **admin** - quản trị hệ thống (`/admin`): xem mọi người dùng/lớp, đổi role.
+- **user** - thành viên thường. Một user **vừa có thể dạy vừa có thể học**:
   - tạo lớp → là **giáo viên** của lớp đó (`classes.teacher_id = auth.uid()`)
   - được thêm vào lớp → là **học sinh** của lớp đó (`enrollments`)
 
@@ -25,7 +25,7 @@
 3. `user && (/login | /register | /)` → `homeFor(role)` = `/admin` nếu admin, ngược lại `/classes`.
 4. `user && /admin` mà role ≠ admin → `/classes`.
 
-## Quyền theo lớp — `lib/access.ts`
+## Quyền theo lớp - `lib/access.ts`
 
 `getClassAccess(classId)` trả về:
 
@@ -34,8 +34,8 @@
 | `isAdmin` | role = admin |
 | `isTeacher` | `classes.teacher_id === user.id` |
 | `isEnrolled` | có `enrollments` active |
-| `canManage` | `isTeacher || isAdmin` — tạo/sửa bài, thêm học sinh |
-| `canView` | `canManage || isEnrolled` — xem nội dung lớp |
+| `canManage` | `isTeacher || isAdmin` - tạo/sửa bài, thêm học sinh |
+| `canView` | `canManage || isEnrolled` - xem nội dung lớp |
 
 Guard bằng **layout server component**:
 
@@ -44,9 +44,20 @@ Guard bằng **layout server component**:
 
 RLS ở DB là lớp chặn thật; guard chỉ để trả 404 gọn thay vì trang lỗi.
 
-## Thêm học sinh — `POST /api/enroll-student`
+## Mời vào lớp - `POST /api/enroll-student`
 
 1. Server client (RLS) xác minh người gọi là giáo viên của lớp.
 2. Service-role client tra email → user id.
-3. Từ chối nếu là tài khoản `admin` hoặc chính người gọi.
-4. `upsert` vào `enrollments`.
+3. Từ chối nếu là tài khoản `admin`, chính người gọi, hoặc đã là thành viên.
+4. Tạo `enrollments` với `status = 'invited'`.
+
+### Luồng lời mời (`enrollments.status`)
+
+- `invited` — giáo viên đã mời; `is_enrolled()` = false nên chưa xem được nội dung lớp,
+  nhưng thấy được tên lớp (policy `classes: invited user can view` + `is_invited()`).
+- Học sinh vào `/classes` → mục **"Lời mời vào lớp"** → **Tham gia** (`invited → active`)
+  hoặc **Từ chối** (`invited → declined`). Policy `enrollments: student responds to invite`
+  chỉ cho chuyển **từ** `invited`.
+- Badge số lời mời hiện trên nav (AppShell đếm, truyền vào AppNav).
+- Thành viên `active` xem được danh sách thành viên (`enrollments: members see roster`);
+  giáo viên/admin thấy thêm cả lời mời đang chờ. Người tạo lớp = `classes.teacher_id`.

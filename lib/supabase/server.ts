@@ -16,7 +16,7 @@ export function createClient() {
           try {
             cookieStore.set({ name, value, ...options });
           } catch {
-            // called from a Server Component — safe to ignore if middleware refreshes session
+            // called from a Server Component - safe to ignore if middleware refreshes session
           }
         },
         remove(name: string, options: CookieOptions) {

@@ -37,6 +37,16 @@ export default async function AppShell({ children }: { children: ReactNode }) {
     }
   }
 
+  let inviteCount = 0;
+  if (user) {
+    const { count } = await supabase
+      .from('enrollments')
+      .select('id', { count: 'exact', head: true })
+      .eq('student_id', user.id)
+      .eq('status', 'invited');
+    inviteCount = count ?? 0;
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       <TopBar variant="app" />
@@ -44,6 +54,7 @@ export default async function AppShell({ children }: { children: ReactNode }) {
         name={profile?.full_name || 'Bạn'}
         role={profile?.role || 'user'}
         avatarUrl={profile?.avatar_url}
+        inviteCount={inviteCount}
       />
       <main className="flex-1">{children}</main>
       <Footer variant="app" />

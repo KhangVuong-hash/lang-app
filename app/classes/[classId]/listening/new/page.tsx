@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/client';
 import type { ScriptSegment } from '@/components/YouTubeScriptPlayer';
 import { extractYoutubeId } from '@/lib/youtube';
 import { parseTranscript } from '@/lib/transcript';
+import Spinner from '@/components/ui/Spinner';
+import LoadingOverlay from '@/components/ui/LoadingOverlay';
 
 export default function NewListeningLessonPage() {
   const { classId } = useParams<{ classId: string }>();
@@ -131,6 +133,7 @@ export default function NewListeningLessonPage() {
 
   return (
     <div className="container-page max-w-4xl space-y-6 py-8">
+      {fetching && <LoadingOverlay label="Đang lấy script từ video…" />}
       <h1 className="text-2xl font-bold sm:text-3xl">Tạo bài nghe mới</h1>
 
       <div className="card space-y-3 p-5">
@@ -171,6 +174,7 @@ export default function NewListeningLessonPage() {
               disabled={!youtubeUrl || fetching}
               className="btn-primary shrink-0"
             >
+              {fetching && <Spinner />}
               {fetching ? 'Đang lấy script…' : 'Lấy script tự động'}
             </button>
           </div>
@@ -281,6 +285,7 @@ export default function NewListeningLessonPage() {
         disabled={saving || !youtubeUrl.trim() || !title.trim()}
         className="btn w-full bg-success text-white hover:opacity-90"
       >
+        {saving && <Spinner />}
         {saving ? 'Đang lưu…' : 'Lưu bài học'}
       </button>
     </div>

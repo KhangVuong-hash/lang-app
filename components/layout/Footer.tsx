@@ -7,7 +7,7 @@ export default function Footer({ variant = 'public' }: { variant?: 'public' | 'a
     return (
       <footer className="border-t border-line bg-surface">
         <div className="container-page flex flex-col items-center justify-between gap-2 py-5 text-xs text-ink-faint sm:flex-row">
-          <p>© {new Date().getFullYear()} LangApp — Học ngoại ngữ theo lớp</p>
+          <p>© {new Date().getFullYear()} LangApp - Học ngoại ngữ theo lớp</p>
           <Link href="/profile" className="hover:text-ink">
             Sổ tay từ vựng &amp; ngữ pháp
           </Link>
@@ -32,7 +32,7 @@ export default function Footer({ variant = 'public' }: { variant?: 'public' | 'a
           {SKILLS.map((s) => (
             <p key={s.key} className="text-ink-soft">
               <span aria-hidden>{s.icon}</span> {s.label}
-              {s.comingSoon && <span className="text-ink-faint"> — sắp có</span>}
+              {s.comingSoon && <span className="text-ink-faint"> - sắp có</span>}
             </p>
           ))}
         </nav>

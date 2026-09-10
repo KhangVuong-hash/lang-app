@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import AuthShell from '@/components/layout/AuthShell';
+import Spinner from '@/components/ui/Spinner';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -114,6 +115,7 @@ export default function RegisterPage() {
         {error && <p className="text-sm text-danger">{error}</p>}
 
         <button type="submit" disabled={loading} className="btn-primary w-full">
+          {loading && <Spinner />}
           {loading ? 'Đang tạo tài khoản…' : 'Đăng ký'}
         </button>
 

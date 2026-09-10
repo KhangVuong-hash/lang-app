@@ -4,11 +4,11 @@ Học một ngôn ngữ = nhặt nhạnh từng câu, tô đậm chỗ quan tr�
 
 ## Motif thị giác
 
-- **Bong bóng hội thoại** — dùng cho logo và thẻ testimonial (góc `rounded-2xl rounded-bl-sm`).
-- **Vệt bút dạ quang** (`.mark` trong `globals.css`) — nền gradient vàng nhạt chạy sau từ
+- **Bong bóng hội thoại** - dùng cho logo và thẻ testimonial (góc `rounded-2xl rounded-bl-sm`).
+- **Vệt bút dạ quang** (`.mark` trong `globals.css`) - nền gradient vàng nhạt chạy sau từ
   khoá trong tiêu đề. Thay cho gạch chân / dấu `→` / nhãn ALL-CAPS.
-- **Nhịp trang sổ** — lề rộng, một cột đọc, chấm bi (`radial-gradient`) mờ dần ở hero.
-- **Danh tính kỹ năng** — 4 kỹ năng giữ nguyên màu + icon ở mọi nơi (landing → dashboard →
+- **Nhịp trang sổ** - lề rộng, một cột đọc, chấm bi (`radial-gradient`) mờ dần ở hero.
+- **Danh tính kỹ năng** - 4 kỹ năng giữ nguyên màu + icon ở mọi nơi (landing → dashboard →
   bài học) để người học dựng bản đồ trong đầu.
 
 ## Chống "default AI-generated look"
