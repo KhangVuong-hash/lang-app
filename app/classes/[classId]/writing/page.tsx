@@ -14,6 +14,7 @@ export default async function WritingListPage({ params }: { params: { classId: s
     .from('writing_topics')
     .select('*')
     .eq('class_id', params.classId)
+    .is('deleted_at', null)
     .order('created_at', { ascending: false });
 
   const list = topics ?? [];

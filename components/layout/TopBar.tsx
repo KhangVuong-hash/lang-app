@@ -8,8 +8,8 @@ export default function TopBar({ variant = 'public' }: { variant?: 'public' | 'a
             : 'Chúc bạn một buổi học hiệu quả'}
         </p>
         <div className="flex items-center gap-3">
-          <a href="mailto:hotro@langapp.vn" className="hover:text-white">
-            hotro@langapp.vn
+          <a href="mailto:hotro@BanThuApp.vn" className="hover:text-white">
+            hotro@BanThuApp.vn
           </a>
           <span aria-hidden className="text-white/25">
             |

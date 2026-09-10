@@ -1,4 +1,4 @@
-# LangApp - Nền tảng học ngoại ngữ (Next.js + Supabase)
+# BanThuApp - Nền tảng học ngoại ngữ (Next.js + Supabase)
 
 Ứng dụng học ngoại ngữ đa ngôn ngữ (Anh, Trung, Nhật, Hàn - mở rộng được) với 3 vai trò
 **Admin / Giáo viên / Học sinh**, lớp học gồm 4 kỹ năng (Nghe, Nói, Viết, Đọc - Đọc tạm đóng),

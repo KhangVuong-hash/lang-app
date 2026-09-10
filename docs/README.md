@@ -1,4 +1,4 @@
-# Tài liệu LangApp
+# Tài liệu BanThuApp
 
 Chia nhỏ theo chủ đề để dễ quản lý.
 

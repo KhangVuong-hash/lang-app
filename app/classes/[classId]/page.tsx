@@ -6,6 +6,7 @@ import SkillGrid from '@/components/ui/SkillGrid';
 import LanguageCrest from '@/components/ui/LanguageCrest';
 import StatusPill from '@/components/ui/StatusPill';
 import EnrollStudentForm from './EnrollStudentForm';
+import DeleteResource from '@/components/DeleteResource';
 import { LANGUAGE_MAP } from '@/lib/constants';
 
 export default async function ClassOverview({ params }: { params: { classId: string } }) {
@@ -99,6 +100,24 @@ export default async function ClassOverview({ params }: { params: { classId: str
           </div>
         )}
       </div>
+
+      {canManage && (
+        <div className="mt-8 rounded-xl border border-danger/30 bg-danger/5 p-5">
+          <h2 className="font-display text-sm font-semibold text-ink">Vùng nguy hiểm</h2>
+          <p className="mt-1 text-sm text-ink-soft">
+            Xoá lớp sẽ xoá toàn bộ bài học, bài nộp và thành viên của lớp.
+          </p>
+          <div className="mt-3">
+            <DeleteResource
+              table="classes"
+              id={params.classId}
+              redirectTo="/classes"
+              label="Xoá lớp học"
+              question="Xoá lớp này và toàn bộ nội dung bên trong? Không hoàn tác được."
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

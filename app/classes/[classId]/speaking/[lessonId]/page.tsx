@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getClassAccess } from '@/lib/access';
 import ShadowingPlayer from '@/components/ShadowingPlayer';
 import ScriptManager from '@/components/ScriptManager';
+import DeleteResource from '@/components/DeleteResource';
 import PageHeader from '@/components/ui/PageHeader';
 
 export default async function SpeakingLessonPage({
@@ -18,6 +19,7 @@ export default async function SpeakingLessonPage({
     .from('speaking_lessons')
     .select('*')
     .eq('id', params.lessonId)
+    .is('deleted_at', null)
     .single();
   if (!lesson) notFound();
 
@@ -42,11 +44,22 @@ export default async function SpeakingLessonPage({
         showRecorder={canRecord}
       />
       {access.canManage && (
-        <ScriptManager
-          table="speaking_script_segments"
-          lessonId={params.lessonId}
-          initialSegments={(segments ?? []) as any}
-        />
+        <>
+          <ScriptManager
+            table="speaking_script_segments"
+            lessonId={params.lessonId}
+            initialSegments={(segments ?? []) as any}
+          />
+          <div className="mt-6">
+            <DeleteResource
+              table="speaking_lessons"
+              id={params.lessonId}
+              redirectTo={`/classes/${params.classId}/speaking`}
+              label="Xoá bài shadowing này"
+              question="Xoá bài shadowing và toàn bộ script? Không hoàn tác được."
+            />
+          </div>
+        </>
       )}
       {canRecord && (
         <p className="mt-4 text-xs text-ink-faint">

@@ -39,6 +39,12 @@ vocabulary_notes / grammar_notes (user_id → profiles, class_id?, language_code
 | `on_class_created` | INSERT `classes` | tạo 4 dòng `class_skills` (reading `is_enabled=false`) |
 | `trg_prevent_self_role_escalation` | UPDATE `profiles` | chặn user tự đổi `role` (RLS là row-level, không chặn được cột) |
 | `trg_writing_submissions_updated_at` | UPDATE `writing_submissions` | tự bump `updated_at` |
+| `set_audit_fields()` (trg_audit_*) | UPDATE `classes` / `listening_lessons` / `speaking_lessons` / `writing_topics` | tự set `updated_at = now()`, `updated_by = auth.uid()` |
+
+**Soft delete + audit:** 4 bảng trên có `created_by`, `updated_at/by`, `deleted_at/by`.
+Nút "Xoá" chỉ set `deleted_at`/`deleted_by` (không DELETE). Mọi truy vấn đọc lọc
+`deleted_at is null`; policy hướng học sinh cũng thêm điều kiện đó. Segments
+(`*_script_segments`) vẫn xoá cứng vì bị thay toàn bộ khi sửa script.
 
 Mọi SECURITY DEFINER function đặt `search_path = ''` + schema-qualify (chuẩn Supabase advisor).
 

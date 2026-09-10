@@ -22,7 +22,7 @@ export default function StudentWriteTopic({
 
   useEffect(() => {
     (async () => {
-      const { data: t } = await supabase.from('writing_topics').select('*').eq('id', topicId).single();
+      const { data: t } = await supabase.from('writing_topics').select('*').eq('id', topicId).is('deleted_at', null).single();
       setTopic(t);
 
       const {

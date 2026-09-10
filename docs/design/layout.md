@@ -20,8 +20,8 @@ route tự chọn shell.
 ## Wireframe - Landing (chưa đăng nhập)
 
 ```
-TopBar: khẩu hiệu · hotro@langapp.vn · VI
-Navbar sticky: ◆LangApp  Tính năng 4kỹnăng Ngônngữ Vềchúngtôi   [Đăng nhập][Bắt đầu miễn phí]
+TopBar: khẩu hiệu · hotro@BanThuApp.vn · VI
+Navbar sticky: ◆BanThuApp  Tính năng 4kỹnăng Ngônngữ Vềchúngtôi   [Đăng nhập][Bắt đầu miễn phí]
 HERO 7/5:  "Học ‹‹từng câu một›› ..."  +  thẻ-script CSS (nút play, dòng highlight, chip ngôn ngữ)
 USP BAR:   4 cột icon+text, chỉ divider, không thẻ
 4 KỸ NĂNG: 4 thẻ, thanh accent trái theo màu kỹ năng, blurb thật
@@ -35,7 +35,7 @@ CTA cuối + FOOTER 4 cột
 ## Wireframe - Dashboard `/classes` (đã đăng nhập)
 
 ```
-TopBar mảnh + AppNav: ◆LangApp [badge] Lớp học Sổ tay   ◔Tên▾(Trang cá nhân·Đăng xuất)
+TopBar mảnh + AppNav: ◆BanThuApp [badge] Lớp học Sổ tay   ◔Tên▾(Trang cá nhân·Đăng xuất)
 "Lớp học của tôi" (vệt highlight) + [Tạo lớp học]
 Section "Lớp tôi dạy"  - lưới thẻ (nếu có)
 Section "Lớp tôi học"  - lưới thẻ (nếu có)

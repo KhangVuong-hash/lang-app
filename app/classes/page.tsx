@@ -24,6 +24,7 @@ export default async function ClassesDashboard() {
       .from('classes')
       .select('*, languages(name), class_skills(skill_type, is_enabled)')
       .eq('teacher_id', user?.id)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false }),
     supabase
       .from('enrollments')

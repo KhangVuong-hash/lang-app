@@ -1,4 +1,4 @@
-# Prompt cho Claude Code - Thiết kế lại UI/UX cho LangApp
+# Prompt cho Claude Code - Thiết kế lại UI/UX cho BanThuApp
 
 > Copy toàn bộ nội dung dưới đây và dán vào Claude Code trong thư mục gốc project `lang-app`.
 >
@@ -9,7 +9,7 @@
 
 ## Bối cảnh dự án
 
-Đây là project Next.js 14 (App Router) + Tailwind CSS + Supabase, tên **LangApp** - nền
+Đây là project Next.js 14 (App Router) + Tailwind CSS + Supabase, tên **BanThuApp** - nền
 tảng học ngoại ngữ đa ngôn ngữ (Anh/Trung/Nhật/Hàn) với 3 vai trò Admin/Giáo viên/Học sinh,
 lớp học gồm 4 kỹ năng Nghe/Nói/Viết/Đọc. Hiện tại UI mới chỉ có Tailwind mặc định, chưa có
 định hướng thiết kế nhất quán, chưa có navbar/layout chung. Nhiệm vụ của bạn là thiết kế lại
@@ -56,7 +56,7 @@ làm chi tiết trang trí...
 - `components/layout/TopBar.tsx` - thanh mỏng phía trên: liên hệ hỗ trợ, chọn ngôn ngữ
   hiển thị (vi/en), social links.
 - `components/layout/Navbar.tsx` - sticky, đổi nền khi scroll, gồm:
-  - Logo LangApp
+  - Logo BanThuApp
   - Menu chính (khác nhau theo trạng thái đăng nhập/role - ẩn hiện qua props hoặc server
     component fetch role)
   - Nếu **chưa đăng nhập**: menu marketing (Tính năng, Ngôn ngữ hỗ trợ, Về chúng tôi) +

@@ -36,7 +36,7 @@ export default function Logo({
           />
         </svg>
       </span>
-      <span>LangApp</span>
+      <span>BanThuApp</span>
     </Link>
   );
 }

@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
   }
 
-  const { data: cls } = await supabase.from('classes').select('id, teacher_id').eq('id', classId).single();
+  const { data: cls } = await supabase.from('classes').select('id, teacher_id').eq('id', classId).is('deleted_at', null).single();
 
   if (!cls || cls.teacher_id !== user.id) {
     return NextResponse.json({ error: 'Bạn không phải giáo viên của lớp này' }, { status: 403 });

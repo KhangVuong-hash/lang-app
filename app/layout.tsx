@@ -17,7 +17,7 @@ const sans = Be_Vietnam_Pro({
 });
 
 export const metadata = {
-  title: 'LangApp - Học ngoại ngữ: Nghe, Nói, Viết, Đọc',
+  title: 'BanThuApp - Học ngoại ngữ: Nghe, Nói, Viết, Đọc',
   description:
     'Nền tảng học ngoại ngữ đa ngôn ngữ (Anh, Trung, Nhật, Hàn) theo lớp học, luyện đủ 4 kỹ năng với video thật và giáo viên theo dõi sát.',
 };

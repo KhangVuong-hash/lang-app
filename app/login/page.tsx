@@ -2,13 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import AuthShell from '@/components/layout/AuthShell';
 import Spinner from '@/components/ui/Spinner';
 
 export default function LoginPage() {
-  const router = useRouter();
   const supabase = createClient();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,13 +18,14 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
     if (error) {
+      setLoading(false);
       setError(error.message);
       return;
     }
-    router.refresh();
-    router.push('/'); // middleware sẽ điều hướng đúng vai trò
+    // Điều hướng cứng để chắc chắn cookie phiên mới được gửi kèm (không cần F5).
+    // `/` (server) sẽ chuyển tiếp đúng theo vai trò.
+    window.location.assign('/');
   }
 
   return (

@@ -1,14 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import AuthShell from '@/components/layout/AuthShell';
 import Spinner from '@/components/ui/Spinner';
 
 export default function RegisterPage() {
-  const router = useRouter();
   const supabase = createClient();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -44,8 +42,7 @@ export default function RegisterPage() {
       return;
     }
 
-    router.refresh();
-    router.push('/');
+    window.location.assign('/');
   }
 
   if (done) {

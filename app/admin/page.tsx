@@ -14,6 +14,7 @@ export default async function AdminPage() {
   const { data: classes } = await supabase
     .from('classes')
     .select('*, languages(name), profiles!classes_teacher_id_fkey(full_name)')
+    .is('deleted_at', null)
     .order('created_at', { ascending: false });
 
   return (

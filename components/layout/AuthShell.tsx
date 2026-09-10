@@ -9,7 +9,7 @@ export default function AuthShell({ children }: { children: ReactNode }) {
       </header>
       <main className="flex flex-1 items-center justify-center px-4 py-10">{children}</main>
       <footer className="container-page py-6 text-center text-xs text-ink-faint">
-        © {new Date().getFullYear()} LangApp
+        © {new Date().getFullYear()} BanThuApp
       </footer>
     </div>
   );

@@ -7,7 +7,7 @@ export default function Footer({ variant = 'public' }: { variant?: 'public' | 'a
     return (
       <footer className="border-t border-line bg-surface">
         <div className="container-page flex flex-col items-center justify-between gap-2 py-5 text-xs text-ink-faint sm:flex-row">
-          <p>© {new Date().getFullYear()} LangApp - Học ngoại ngữ theo lớp</p>
+          <p>© {new Date().getFullYear()} BanThuApp - Học ngoại ngữ theo lớp</p>
           <Link href="/profile" className="hover:text-ink">
             Sổ tay từ vựng &amp; ngữ pháp
           </Link>
@@ -49,8 +49,8 @@ export default function Footer({ variant = 'public' }: { variant?: 'public' | 'a
 
         <div className="space-y-2 text-sm">
           <p className="font-display font-semibold text-ink">Liên hệ</p>
-          <a href="mailto:hotro@langapp.vn" className="block text-ink-soft hover:text-ink">
-            hotro@langapp.vn
+          <a href="mailto:hotro@BanThuApp.vn" className="block text-ink-soft hover:text-ink">
+            hotro@BanThuApp.vn
           </a>
           <Link href="/register" className="block text-ink-soft hover:text-ink">
             Tạo tài khoản học sinh
@@ -62,7 +62,7 @@ export default function Footer({ variant = 'public' }: { variant?: 'public' | 'a
       </div>
       <div className="border-t border-line">
         <div className="container-page py-4 text-xs text-ink-faint">
-          © {new Date().getFullYear()} LangApp. Ảnh minh hoạ và lời chứng thực trên trang này
+          © {new Date().getFullYear()} BanThuApp. Ảnh minh hoạ và lời chứng thực trên trang này
           chỉ mang tính ví dụ.
         </div>
       </div>

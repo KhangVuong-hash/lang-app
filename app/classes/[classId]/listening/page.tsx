@@ -15,6 +15,7 @@ export default async function ListeningListPage({ params }: { params: { classId:
     .from('listening_lessons')
     .select('*')
     .eq('class_id', params.classId)
+    .is('deleted_at', null)
     .order('created_at', { ascending: false });
 
   const list = lessons ?? [];

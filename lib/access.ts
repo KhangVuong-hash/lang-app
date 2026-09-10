@@ -33,6 +33,7 @@ export async function getClassAccess(classId: string): Promise<ClassAccess | nul
     .from('classes')
     .select('*, languages(name)')
     .eq('id', classId)
+    .is('deleted_at', null)
     .single();
   if (!klass) return null;
 

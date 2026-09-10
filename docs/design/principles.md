@@ -1,4 +1,4 @@
-# Nguyên tắc thiết kế cho LangApp
+# Nguyên tắc thiết kế cho BanThuApp
 
 1. **Mỗi màn hình là một trang sổ.** Lề rộng, một cột đọc rõ ràng, tiêu đề section được
    nhấn bằng vệt bút dạ quang (`.mark`) chứ không phải hoạ tiết trang trí.

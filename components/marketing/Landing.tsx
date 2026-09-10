@@ -36,7 +36,7 @@ function Hero() {
             <span className="mark">từng câu một</span>
           </h1>
           <p className="mt-5 max-w-xl text-lg text-ink-soft">
-            LangApp ghép bạn vào lớp học của một giáo viên thật. Bạn luyện đủ bốn kỹ năng
+            BanThuApp ghép bạn vào lớp học của một giáo viên thật. Bạn luyện đủ bốn kỹ năng
             Nghe, Nói, Viết, Đọc trên chính những video và bài tập giáo viên giao - và được
             theo dõi tiến độ.
           </p>

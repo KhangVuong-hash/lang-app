@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
+import DeleteResource from '@/components/DeleteResource';
 import ReviewForm from './ReviewForm';
 
 const STATUS: Record<string, { label: string; cls: string }> = {
@@ -23,6 +24,7 @@ export default async function TeacherTopicView({
     .from('writing_topics')
     .select('*')
     .eq('id', topicId)
+    .is('deleted_at', null)
     .single();
   if (!topic) notFound();
 
@@ -68,6 +70,16 @@ export default async function TeacherTopicView({
           })}
         </div>
       )}
+
+      <div className="mt-8">
+        <DeleteResource
+          table="writing_topics"
+          id={topicId}
+          redirectTo={`/classes/${classId}/writing`}
+          label="Xoá chủ đề này"
+          question="Xoá chủ đề và toàn bộ bài nộp, nhận xét? Không hoàn tác được."
+        />
+      </div>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-# Kiến trúc dự án LangApp
+# Kiến trúc dự án BanThuApp
 
 Tài liệu chia nhỏ theo chủ đề.
 

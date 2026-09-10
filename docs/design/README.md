@@ -1,4 +1,4 @@
-# Hệ thống thiết kế LangApp
+# Hệ thống thiết kế BanThuApp
 
 Tài liệu chia nhỏ theo từng chủ đề để dễ quản lý.
 

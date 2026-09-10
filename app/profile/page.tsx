@@ -30,7 +30,7 @@ export default async function ProfilePage() {
   const [{ data: profile }, { data: teaching }, { data: enrollments }, { data: vocab }, { data: grammar }] =
     await Promise.all([
       supabase.from('profiles').select('*').eq('id', user?.id).single(),
-      supabase.from('classes').select('*, languages(name)').eq('teacher_id', user?.id),
+      supabase.from('classes').select('*, languages(name)').eq('teacher_id', user?.id).is('deleted_at', null),
       supabase
         .from('enrollments')
         .select('classes(*, languages(name))')
