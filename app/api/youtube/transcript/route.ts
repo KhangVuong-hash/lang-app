@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractYoutubeId } from '@/lib/youtube';
 
-export const maxDuration = 60; // Gemini có thể mất vài chục giây với video dài
+export const maxDuration = 60; // Vercel: Hobby tối đa 60s
 
 type Segment = {
   order_index: number;
@@ -13,7 +13,7 @@ type Segment = {
 const PROMPT =
   'Chép lời (transcribe) video YouTube này theo từng câu hoặc cụm ngắn, đúng ngôn ngữ gốc. ' +
   'CHỈ trả về một mảng JSON gồm các object {"start": <giây tính từ đầu video, số thực>, "text": <chuỗi>}, ' +
-  'theo thứ tự thời gian. Không kèm giải thích, không markdown, không ```json.';
+  'theo thứ tự thời gian. Không kèm giải thích, không markdown.';
 
 function toSegments(list: { start: number; text: string }[]): Segment[] {
   return list
@@ -31,7 +31,7 @@ function toSegments(list: { start: number; text: string }[]): Segment[] {
 }
 
 function extractJsonArray(text: string): { start: number; text: string }[] {
-  const cleaned = text.replace(/```json\s*|\s*```/g, '').trim();
+  const cleaned = text.replace(/```json\s*|```/g, '').trim();
   try {
     const v = JSON.parse(cleaned);
     if (Array.isArray(v)) return v;
@@ -49,44 +49,8 @@ function extractJsonArray(text: string): { start: number; text: string }[] {
   return [];
 }
 
-async function callGemini(model: string, youtubeUrl: string, apiKey: string) {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          { parts: [{ fileData: { fileUri: youtubeUrl } }, { text: PROMPT }] },
-        ],
-        generationConfig: { temperature: 0 },
-      }),
-    }
-  );
-
-  const bodyText = await res.text();
-  if (!res.ok) {
-    throw new Error(`${model} → HTTP ${res.status}: ${bodyText.slice(0, 400)}`);
-  }
-
-  let data: any;
-  try {
-    data = JSON.parse(bodyText);
-  } catch {
-    throw new Error(`${model} → phản hồi không phải JSON`);
-  }
-
-  const cand = data?.candidates?.[0];
-  const partText = cand?.content?.parts?.map((p: any) => p?.text).filter(Boolean).join('\n');
-  if (!partText) {
-    throw new Error(`${model} → không có nội dung (${cand?.finishReason ?? 'unknown'})`);
-  }
-
-  return toSegments(extractJsonArray(partText));
-}
-
 export async function POST(req: NextRequest) {
-  const { youtubeUrl } = await req.json();
+  const { youtubeUrl } = await req.json().catch(() => ({}));
 
   if (!youtubeUrl) {
     return NextResponse.json({ error: 'Thiếu youtubeUrl' }, { status: 400 });
@@ -107,33 +71,81 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const models = [
-    ...new Set(
-      [
-        process.env.GEMINI_MODEL,
-        'gemini-3.6-flash',
-        'gemini-flash-latest',
-        'gemini-2.0-flash',
-      ].filter(Boolean) as string[]
-    ),
-  ];
+  const model = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+  // Chép hết video dài (30+ phút) vượt quá giới hạn thời gian của serverless.
+  // Giới hạn cửa sổ xử lý; giáo viên dán phần còn lại nếu cần.
+  const maxSeconds = Number(process.env.GEMINI_MAX_SECONDS || 900);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 55_000);
 
-  const errors: string[] = [];
-  for (const model of models) {
-    try {
-      const segments = await callGemini(model, youtubeUrl, apiKey);
-      if (segments.length) return NextResponse.json({ videoId, segments, source: model });
-      errors.push(`${model}: 0 câu`);
-    } catch (e: any) {
-      errors.push(e?.message ?? String(e));
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  fileData: { fileUri: youtubeUrl },
+                  videoMetadata: { startOffset: '0s', endOffset: `${maxSeconds}s` },
+                },
+                { text: PROMPT },
+              ],
+            },
+          ],
+          generationConfig: {
+            temperature: 0,
+            thinkingConfig: { thinkingLevel: 'LOW' }, // giảm độ trễ; 3.6-flash chấp nhận
+          },
+        }),
+      }
+    );
+
+    const bodyText = await res.text();
+    if (!res.ok) {
+      return NextResponse.json(
+        {
+          error: 'Gemini không lấy được script. Hãy dán transcript từ YouTube vào ô bên dưới.',
+          detail: `${model} HTTP ${res.status}: ${bodyText.slice(0, 300)}`,
+        },
+        { status: 422 }
+      );
     }
-  }
 
-  return NextResponse.json(
-    {
-      error: 'Gemini không lấy được script. Hãy dán transcript từ YouTube vào ô bên dưới.',
-      detail: errors.join(' | '),
-    },
-    { status: 422 }
-  );
+    const data = JSON.parse(bodyText);
+    const partText: string = (data?.candidates?.[0]?.content?.parts ?? [])
+      .map((p: any) => p?.text)
+      .filter(Boolean)
+      .join('\n');
+
+    const segments = toSegments(extractJsonArray(partText));
+    if (!segments.length) {
+      return NextResponse.json(
+        {
+          error: 'Gemini không trả về câu nào. Hãy dán transcript thủ công.',
+          detail: `finishReason=${data?.candidates?.[0]?.finishReason ?? '?'}`,
+        },
+        { status: 422 }
+      );
+    }
+
+    return NextResponse.json({ videoId, segments, source: model });
+  } catch (e: any) {
+    const aborted = e?.name === 'AbortError';
+    return NextResponse.json(
+      {
+        error: aborted
+          ? 'Video quá dài nên lấy script tự động bị quá thời gian. Hãy dùng video ngắn hơn hoặc dán transcript thủ công.'
+          : 'Không gọi được Gemini. Hãy dán transcript từ YouTube vào ô bên dưới.',
+        detail: String(e?.message ?? e),
+      },
+      { status: 422 }
+    );
+  } finally {
+    clearTimeout(timer);
+  }
 }

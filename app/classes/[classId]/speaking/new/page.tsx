@@ -33,16 +33,24 @@ export default function NewSpeakingLessonPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ youtubeUrl }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setError((data.error || 'Lỗi không xác định') + (data.detail ? ` (${data.detail})` : ''));
+      const raw = await res.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        data = { error: 'Máy chủ gặp lỗi hoặc quá thời gian khi lấy script.' };
+      }
+      if (!res.ok || !data.segments) {
+        setError(
+          (data.error || `Lỗi ${res.status}`) + (data.detail ? ` — ${data.detail}` : '')
+        );
         setVideoId(extractYoutubeId(youtubeUrl));
         return;
       }
       setVideoId(data.videoId);
       setSegments(data.segments);
     } catch (e: any) {
-      setError(e.message);
+      setError('Không lấy được script: ' + (e?.message ?? e) + '. Hãy dán transcript thủ công.');
     } finally {
       setFetching(false);
     }
@@ -139,7 +147,7 @@ export default function NewSpeakingLessonPage() {
               className="btn-primary shrink-0"
             >
               {fetching && <Spinner />}
-              {fetching ? 'Đang lấy…' : 'Lấy script tự động'}
+              {fetching ? 'Đang thử…' : 'Thử lấy bằng AI'}
             </button>
           </div>
         </div>

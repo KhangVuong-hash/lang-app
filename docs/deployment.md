@@ -51,12 +51,14 @@ Project Settings → Environment Variables (áp cho Production + Preview + Devel
 
 ## Lưu ý
 
-- **Lấy script tự động**: `POST /api/youtube/transcript` thử theo thứ tự
-  (1) Gemini nếu có `GEMINI_API_KEY` — nhận thẳng URL YouTube, ổn định trên Vercel;
-  (2) cào phụ đề `youtube-transcript` — hay bị YouTube chặn từ IP datacenter.
-  Nếu cả hai fail, giáo viên **dán transcript** từ YouTube ("Hiển thị bản chép lời") vào ô
-  có sẵn ở trang tạo/sửa bài. Video dài (>20 phút) qua Gemini có thể mất 20-40s và tốn
-  nhiều token — cân nhắc dùng clip ngắn.
+- **Lấy script bằng AI**: `POST /api/youtube/transcript` gọi Gemini (`gemini-3.6-flash`)
+  với URL YouTube. Model này "suy nghĩ" nên **chậm** (30-90s tuỳ video) và thường **vượt
+  giới hạn 60s của Vercel Hobby** → trả lỗi "quá thời gian".
+  - Route tự huỷ ở 55s và trả JSON lỗi gọn (không phải trang lỗi HTML).
+  - `GEMINI_MAX_SECONDS` (mặc định 900) giới hạn cửa sổ video xử lý.
+  - Muốn ổn định hơn: nâng Vercel lên **Pro** (giới hạn 300s) rồi đặt `maxDuration` cao hơn.
+  - **Cách chắc chắn nhất**: giáo viên bấm "Hiển thị bản chép lời" dưới video YouTube, sao
+    chép, dán vào ô ở trang tạo/sửa bài — parse tức thì, không phụ thuộc gì.
 - Middleware chạy trên Edge Runtime - `@supabase/ssr` tương thích, không cần chỉnh.
 - Chưa có route cho giáo viên nghe lại bài ghi âm của học sinh (bucket private). Cần thêm
   route tạo signed URL bằng service role - xem

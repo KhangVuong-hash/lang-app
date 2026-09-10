@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Spinner from '@/components/ui/Spinner';
+import RouteLoading from '@/components/ui/RouteLoading';
 
 export default function StudentWriteTopic({
   classId,
@@ -68,7 +69,7 @@ export default function StudentWriteTopic({
     if (!error) setSubmission(data);
   }
 
-  if (!topic) return <div className="container-page py-10 text-sm text-ink-faint">Đang tải…</div>;
+  if (!topic) return <RouteLoading label="Đang tải bài viết…" />;
 
   return (
     <div className="container-page max-w-2xl py-8">

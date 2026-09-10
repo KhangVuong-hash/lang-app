@@ -1,6 +1,7 @@
 import './globals.css';
 import type { ReactNode } from 'react';
 import { Space_Grotesk, Be_Vietnam_Pro } from 'next/font/google';
+import NextTopLoader from 'nextjs-toploader';
 
 const display = Space_Grotesk({
   subsets: ['latin', 'vietnamese'],
@@ -24,7 +25,10 @@ export const metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="vi" className={`${display.variable} ${sans.variable}`}>
-      <body className="min-h-screen bg-paper text-ink">{children}</body>
+      <body className="min-h-screen bg-paper text-ink">
+        <NextTopLoader color="#1C4A57" height={3} showSpinner={false} shadow="0 0 8px #1C4A57" />
+        {children}
+      </body>
     </html>
   );
 }

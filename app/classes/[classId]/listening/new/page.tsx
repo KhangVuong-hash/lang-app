@@ -33,16 +33,24 @@ export default function NewListeningLessonPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ youtubeUrl }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setError((data.error || 'Lỗi không xác định') + (data.detail ? ` (${data.detail})` : ''));
+      const raw = await res.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        data = { error: 'Máy chủ gặp lỗi hoặc quá thời gian khi lấy script.' };
+      }
+      if (!res.ok || !data.segments) {
+        setError(
+          (data.error || `Lỗi ${res.status}`) + (data.detail ? ` — ${data.detail}` : '')
+        );
         setVideoId(extractYoutubeId(youtubeUrl));
         return;
       }
       setVideoId(data.videoId);
       setSegments(data.segments);
     } catch (e: any) {
-      setError(e.message);
+      setError('Không lấy được script: ' + (e?.message ?? e) + '. Hãy dán transcript thủ công.');
     } finally {
       setFetching(false);
     }
@@ -161,11 +169,11 @@ export default function NewListeningLessonPage() {
               className="btn-primary shrink-0"
             >
               {fetching && <Spinner />}
-              {fetching ? 'Đang lấy script…' : 'Lấy script tự động'}
+              {fetching ? 'Đang thử…' : 'Thử lấy bằng AI'}
             </button>
           </div>
           <p className="mt-1 text-xs text-ink-faint">
-            Dùng AI (Gemini) tạo script trực tiếp từ video. Nếu lỗi, dán transcript từ YouTube hoặc tự thêm dòng bên dưới.
+            Thử tạo script bằng AI (Gemini). Video dài vài phút trở lên hay bị quá thời gian — nhanh và chắc chắn nhất là dán transcript từ YouTube ở ô bên dưới.
           </p>
         </div>
 
