@@ -1,22 +1,33 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { BookMarked, SpellCheck } from 'lucide-react';
+import { BookMarked, Plus, SpellCheck } from 'lucide-react';
 import Spinner from '@/components/ui/Spinner';
 import ConfirmButton from '@/components/ui/ConfirmButton';
 import SimpleSelect from '@/components/ui/SimpleSelect';
+import RichText from '@/components/ui/RichText';
+import RichTextEditor, { RichTextToolbar } from '@/components/ui/RichTextEditor';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { cleanHtml, isEmptyHtml, sanitizeHtml } from '@/lib/rich-text';
 
 type Cls = { id: string; name: string; language_code: string };
 type Kind = 'vocab' | 'grammar';
+// name / desc / example / synonyms là HTML (xem lib/rich-text.ts)
+type Draft = { name: string; desc: string; example: string; synonyms: string; classId: string };
+type DialogState = { mode: 'view' | 'edit'; item: any } | { mode: 'create'; item?: undefined };
+
+const EMPTY_DRAFT: Draft = { name: '', desc: '', example: '', synonyms: '', classId: '' };
 
 const CFG = {
   vocab: {
     table: 'vocabulary_notes',
     name: 'term',
     desc: 'meaning',
+    nameCol: 'Từ',
     namePh: 'Từ mới',
     descPh: 'Nghĩa',
+    synPh: 'Từ đồng nghĩa',
     Icon: BookMarked,
     label: 'Từ vựng',
   },
@@ -24,8 +35,10 @@ const CFG = {
     table: 'grammar_notes',
     name: 'title',
     desc: 'explanation',
+    nameCol: 'Điểm ngữ pháp',
     namePh: 'Điểm ngữ pháp',
     descPh: 'Giải thích',
+    synPh: 'Ngữ pháp đồng nghĩa',
     Icon: SpellCheck,
     label: 'Ngữ pháp',
   },
@@ -33,6 +46,91 @@ const CFG = {
 
 const ALL = '';
 const NONE = '__none__';
+
+// Form thêm / sửa trong dialog: thanh định dạng, các ô nhập, nút lưu.
+function NoteForm({
+  cfg,
+  value,
+  onChange,
+  classes,
+  saving,
+  submitLabel,
+  onSubmit,
+  onCancel,
+}: {
+  cfg: (typeof CFG)[Kind];
+  value: Draft;
+  onChange: (d: Draft) => void;
+  classes: Cls[];
+  saving: boolean;
+  submitLabel: string;
+  onSubmit: () => void;
+  onCancel: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const set = (k: keyof Draft) => (v: string) => onChange({ ...value, [k]: v });
+
+  // vào form là gõ được ngay
+  useEffect(() => {
+    ref.current?.querySelector<HTMLElement>('[contenteditable]')?.focus();
+  }, []);
+
+  return (
+    <div ref={ref}>
+      <RichTextToolbar className="mb-2" />
+      <div className="grid gap-2 sm:grid-cols-2">
+        <RichTextEditor value={value.name} onChange={set('name')} placeholder={cfg.namePh} />
+        <RichTextEditor value={value.desc} onChange={set('desc')} placeholder={cfg.descPh} />
+        <RichTextEditor
+          value={value.example}
+          onChange={set('example')}
+          placeholder="Câu ví dụ"
+          tall
+          className="sm:col-span-2"
+        />
+        <RichTextEditor
+          value={value.synonyms}
+          onChange={set('synonyms')}
+          placeholder={cfg.synPh}
+          className="sm:col-span-2"
+        />
+        <SimpleSelect
+          value={value.classId}
+          onChange={set('classId')}
+          aria-label="Gắn lớp"
+          options={[
+            { value: '', label: 'Không gắn lớp' },
+            ...classes.map((c) => ({ value: c.id, label: c.name })),
+          ]}
+        />
+      </div>
+      <div className="mt-4 flex justify-end gap-2">
+        <button type="button" onClick={onCancel} className="btn-ghost btn-sm">
+          Huỷ
+        </button>
+        <button
+          type="button"
+          onClick={onSubmit}
+          disabled={isEmptyHtml(value.name) || saving}
+          className="btn-primary btn-sm"
+        >
+          {saving && <Spinner />}
+          {submitLabel}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Section({ label, html }: { label: string; html?: string | null }) {
+  if (isEmptyHtml(html)) return null;
+  return (
+    <div className="mt-4">
+      <p className="text-xs font-medium text-ink-faint">{label}</p>
+      <RichText html={html!} className="mt-0.5 text-sm text-ink" />
+    </div>
+  );
+}
 
 export default function Notebook({
   classes,
@@ -58,16 +156,13 @@ export default function Notebook({
     grammar: initialGrammar.length < pageSize,
   });
   const [loadingMore, setLoadingMore] = useState(false);
+  const loadingRef = useRef(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
-  const [name, setName] = useState('');
-  const [desc, setDesc] = useState('');
-  const [example, setExample] = useState('');
-  const [classId, setClassId] = useState('');
+  const [dialog, setDialog] = useState<DialogState | null>(null);
+  const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const [editId, setEditId] = useState<string | null>(null);
-  const [edit, setEdit] = useState({ name: '', desc: '', example: '', classId: '' });
 
   const cfg = CFG[tab];
   const items = lists[tab];
@@ -81,6 +176,10 @@ export default function Notebook({
     if (filter === NONE) q = q.is('class_id', null);
     else if (filter) q = q.eq('class_id', filter);
     return q;
+  }
+
+  function matchesFilter(row: any) {
+    return filter === ALL || (filter === NONE && !row.class_id) || row.class_id === filter;
   }
 
   function setList(k: Kind, fn: (prev: any[]) => any[]) {
@@ -106,33 +205,79 @@ export default function Notebook({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
+  // Lazy load: cuộn tới cuối bảng thì nạp thêm `pageSize` dòng. Phân trang theo mốc
+  // created_at (không theo offset) nên thêm/xoá dòng giữa chừng không làm lệch trang.
   async function loadMore() {
+    const last = items[items.length - 1];
+    if (loadingRef.current || !last) return;
+    loadingRef.current = true;
     setLoadingMore(true);
-    const { data } = await query(tab).range(items.length, items.length + pageSize - 1);
+    const { data } = await query(tab).lt('created_at', last.created_at).limit(pageSize);
+    loadingRef.current = false;
     setLoadingMore(false);
     const rows = data ?? [];
-    setList(tab, (p) => [...p, ...rows]);
+    setList(tab, (p) => [...p, ...rows.filter((r) => !p.some((x) => x.id === r.id))]);
     if (rows.length < pageSize) setDone((p) => ({ ...p, [tab]: true }));
   }
 
+  // chạy lại sau mỗi lần nạp để kiểm tra sentinel còn trong khung nhìn không
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || done[tab] || items.length === 0) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) loadMore();
+      },
+      { rootMargin: '200px' }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, filter, items.length, done[tab]]);
+
+  function fields(d: Draft) {
+    return {
+      [cfg.name]: cleanHtml(d.name),
+      [cfg.desc]: cleanHtml(d.desc),
+      example_sentence: cleanHtml(d.example),
+      synonyms: cleanHtml(d.synonyms),
+    };
+  }
+
+  function openCreate() {
+    setError(null);
+    setDraft({ ...EMPTY_DRAFT, classId: filter && filter !== NONE ? filter : '' });
+    setDialog({ mode: 'create' });
+  }
+
+  function openEdit(it: any) {
+    setError(null);
+    setDraft({
+      name: sanitizeHtml(it[cfg.name] ?? ''),
+      desc: sanitizeHtml(it[cfg.desc] ?? ''),
+      example: sanitizeHtml(it.example_sentence ?? ''),
+      synonyms: sanitizeHtml(it.synonyms ?? ''),
+      classId: it.class_id ?? '',
+    });
+    setDialog({ mode: 'edit', item: it });
+  }
+
   async function add() {
-    if (!name.trim()) return;
+    if (isEmptyHtml(draft.name)) return;
     setSaving(true);
     setError(null);
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    const cls = classes.find((c) => c.id === classId);
+    const cls = classes.find((c) => c.id === draft.classId);
 
     const { data, error } = await supabase
       .from(cfg.table)
       .insert({
         user_id: user?.id,
-        class_id: classId || null,
+        class_id: draft.classId || null,
         language_code: cls?.language_code ?? null,
-        [cfg.name]: name.trim(),
-        [cfg.desc]: desc.trim() || null,
-        example_sentence: example.trim() || null,
+        ...fields(draft),
       })
       .select('*, classes(name)')
       .single();
@@ -143,53 +288,34 @@ export default function Notebook({
       return;
     }
     // chỉ hiện lên đầu danh sách nếu khớp bộ lọc hiện tại
-    const matches =
-      filter === ALL ||
-      (filter === NONE && !data.class_id) ||
-      data.class_id === filter;
-    if (matches) setList(tab, (p) => [data, ...p]);
-    setName('');
-    setDesc('');
-    setExample('');
-  }
-
-  function startEdit(it: any) {
-    setEditId(it.id);
-    setEdit({
-      name: it[cfg.name] ?? '',
-      desc: it[cfg.desc] ?? '',
-      example: it.example_sentence ?? '',
-      classId: it.class_id ?? '',
-    });
+    if (matchesFilter(data)) setList(tab, (p) => [data, ...p]);
+    setDialog(null);
   }
 
   async function saveEdit(id: string) {
-    if (!edit.name.trim()) return;
-    const cls = classes.find((c) => c.id === edit.classId);
+    if (isEmptyHtml(draft.name)) return;
+    setSaving(true);
+    setError(null);
+    const cls = classes.find((c) => c.id === draft.classId);
     const { data, error } = await supabase
       .from(cfg.table)
       .update({
-        [cfg.name]: edit.name.trim(),
-        [cfg.desc]: edit.desc.trim() || null,
-        example_sentence: edit.example.trim() || null,
-        class_id: edit.classId || null,
+        ...fields(draft),
+        class_id: draft.classId || null,
         language_code: cls?.language_code ?? null,
       })
       .eq('id', id)
       .select('*, classes(name)')
       .single();
+    setSaving(false);
     if (error) {
       setError(error.message);
       return;
     }
-    const stillMatches =
-      filter === ALL ||
-      (filter === NONE && !data.class_id) ||
-      data.class_id === filter;
     setList(tab, (p) =>
-      stillMatches ? p.map((x) => (x.id === id ? data : x)) : p.filter((x) => x.id !== id)
+      matchesFilter(data) ? p.map((x) => (x.id === id ? data : x)) : p.filter((x) => x.id !== id)
     );
-    setEditId(null);
+    setDialog({ mode: 'view', item: data });
   }
 
   async function remove(id: string) {
@@ -205,7 +331,10 @@ export default function Notebook({
       return;
     }
     setList(tab, (p) => p.filter((x) => x.id !== id));
+    setDialog(null);
   }
+
+  const editing = dialog?.mode === 'create' || dialog?.mode === 'edit';
 
   return (
     <div>
@@ -228,143 +357,138 @@ export default function Notebook({
           })}
         </div>
 
-        <SimpleSelect
-          value={filter}
-          onChange={setFilter}
-          className="w-auto min-w-[10rem]"
-          aria-label="Lọc theo lớp"
-          options={[
-            { value: ALL, label: 'Tất cả lớp' },
-            { value: NONE, label: 'Không gắn lớp' },
-            ...classes.map((c) => ({ value: c.id, label: c.name })),
-          ]}
-        />
+        <div className="flex items-center gap-2">
+          <SimpleSelect
+            value={filter}
+            onChange={setFilter}
+            className="w-auto min-w-[10rem]"
+            aria-label="Lọc theo lớp"
+            options={[
+              { value: ALL, label: 'Tất cả lớp' },
+              { value: NONE, label: 'Không gắn lớp' },
+              ...classes.map((c) => ({ value: c.id, label: c.name })),
+            ]}
+          />
+          <button onClick={openCreate} className="btn-primary h-10">
+            <Plus className="h-4 w-4" />
+            Thêm
+          </button>
+        </div>
       </div>
 
-      <div className="mt-4 grid gap-2 rounded-lg bg-paper p-3 sm:grid-cols-2">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={cfg.namePh}
-          className="input"
-        />
-        <input
-          value={desc}
-          onChange={(e) => setDesc(e.target.value)}
-          placeholder={cfg.descPh}
-          className="input"
-        />
-        <input
-          value={example}
-          onChange={(e) => setExample(e.target.value)}
-          placeholder="Câu ví dụ"
-          className="input sm:col-span-2"
-        />
-        <SimpleSelect
-          value={classId}
-          onChange={setClassId}
-          aria-label="Gắn lớp"
-          options={[
-            { value: '', label: 'Không gắn lớp' },
-            ...classes.map((c) => ({ value: c.id, label: c.name })),
-          ]}
-        />
-        <button onClick={add} disabled={!name.trim() || saving} className="btn-primary">
-          {saving && <Spinner />}
-          Thêm {cfg.label.toLowerCase()}
-        </button>
-      </div>
-
-      {error && <p className="mt-2 text-xs text-danger">{error}</p>}
-
-      <ul className="mt-4 space-y-2">
-        {items.map((it: any) =>
-          editId === it.id ? (
-            <li key={it.id} className="rounded-lg border border-brand/40 bg-surface p-3">
-              <div className="grid gap-2 sm:grid-cols-2">
-                <input
-                  value={edit.name}
-                  onChange={(e) => setEdit({ ...edit, name: e.target.value })}
-                  className="input"
-                  placeholder={cfg.namePh}
-                />
-                <input
-                  value={edit.desc}
-                  onChange={(e) => setEdit({ ...edit, desc: e.target.value })}
-                  className="input"
-                  placeholder={cfg.descPh}
-                />
-                <input
-                  value={edit.example}
-                  onChange={(e) => setEdit({ ...edit, example: e.target.value })}
-                  className="input sm:col-span-2"
-                  placeholder="Câu ví dụ"
-                />
-                <SimpleSelect
-                  value={edit.classId}
-                  onChange={(v) => setEdit({ ...edit, classId: v })}
-                  aria-label="Gắn lớp"
-                  options={[
-                    { value: '', label: 'Không gắn lớp' },
-                    ...classes.map((c) => ({ value: c.id, label: c.name })),
-                  ]}
-                />
-              </div>
-              <div className="mt-2 flex gap-2">
-                <button onClick={() => saveEdit(it.id)} className="btn-primary btn-sm">
-                  Lưu
-                </button>
-                <button onClick={() => setEditId(null)} className="btn-ghost btn-sm">
-                  Huỷ
-                </button>
-              </div>
-            </li>
-          ) : (
-            <li key={it.id} className="rounded-lg border border-line p-3 text-sm">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-semibold text-ink">{it[cfg.name]}</p>
-                  <p className="text-ink-soft">{it[cfg.desc]}</p>
-                  {it.example_sentence && (
-                    <p className="mt-1 text-xs italic text-ink-faint">“{it.example_sentence}”</p>
-                  )}
-                  {it.classes?.name && (
-                    <p className="mt-1 text-xs text-ink-faint">Lớp: {it.classes.name}</p>
-                  )}
-                </div>
-                <div className="flex shrink-0 items-center gap-3 text-xs">
-                  <button
-                    onClick={() => startEdit(it)}
-                    className="font-medium text-ink-soft hover:text-ink"
-                  >
-                    Sửa
-                  </button>
-                  <ConfirmButton
-                    onConfirm={() => remove(it.id)}
-                    question="Xoá ghi chú này?"
-                    confirmLabel="Xoá"
-                    className="font-medium text-danger hover:underline"
-                  >
-                    Xoá
-                  </ConfirmButton>
-                </div>
-              </div>
-            </li>
-          )
-        )}
+      <div className="mt-4 overflow-hidden rounded-lg border border-line bg-surface">
+        <table className="w-full table-fixed text-left text-sm">
+          <thead className="border-b border-line bg-paper text-xs text-ink-faint">
+            <tr>
+              <th className="w-2/5 px-3 py-2 font-medium">{cfg.nameCol}</th>
+              <th className="px-3 py-2 font-medium">{cfg.descPh}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-line">
+            {items.map((it: any) => (
+              <tr
+                key={it.id}
+                tabIndex={0}
+                onClick={() => {
+                  setError(null);
+                  setDialog({ mode: 'view', item: it });
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setError(null);
+                    setDialog({ mode: 'view', item: it });
+                  }
+                }}
+                className="cursor-pointer align-top hover:bg-paper focus-visible:bg-paper"
+              >
+                <td className="px-3 py-2.5 font-semibold text-ink">
+                  <RichText html={it[cfg.name] ?? ''} className="line-clamp-2 break-words" />
+                </td>
+                <td className="px-3 py-2.5 text-ink-soft">
+                  <RichText html={it[cfg.desc] ?? ''} className="line-clamp-2 break-words" />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
         {items.length === 0 && (
           <p className="py-6 text-center text-sm text-ink-faint">
             Chưa có {cfg.label.toLowerCase()} nào{filter ? ' cho lựa chọn này' : ''}.
           </p>
         )}
-      </ul>
+      </div>
 
       {!done[tab] && items.length > 0 && (
-        <button onClick={loadMore} disabled={loadingMore} className="btn-secondary btn-sm mt-3">
+        <div ref={sentinelRef} className="flex h-10 items-center justify-center text-ink-faint">
           {loadingMore && <Spinner />}
-          Xem thêm {pageSize}
-        </button>
+        </div>
       )}
+
+      <Dialog
+        open={dialog !== null}
+        onOpenChange={(o) => {
+          if (!o) setDialog(null);
+        }}
+      >
+        <DialogContent
+          // đang nhập dở thì chỉ đóng bằng nút, tránh mất chữ vì lỡ bấm ra ngoài / Esc
+          onInteractOutside={(e) => editing && e.preventDefault()}
+          onEscapeKeyDown={(e) => editing && e.preventDefault()}
+          onOpenAutoFocus={(e) => editing && e.preventDefault()}
+        >
+          {dialog?.mode === 'view' && (
+            <div>
+              <DialogTitle className="text-xs font-medium text-ink-faint">{cfg.label}</DialogTitle>
+              <RichText
+                html={dialog.item[cfg.name] ?? ''}
+                className="mt-1 pr-8 font-display text-xl font-semibold text-ink"
+              />
+              <Section label={cfg.descPh} html={dialog.item[cfg.desc]} />
+              <Section label="Câu ví dụ" html={dialog.item.example_sentence} />
+              <Section label="Đồng nghĩa" html={dialog.item.synonyms} />
+              {dialog.item.classes?.name && (
+                <p className="mt-4 text-xs text-ink-faint">Lớp: {dialog.item.classes.name}</p>
+              )}
+              {error && <p className="mt-3 text-xs text-danger">{error}</p>}
+              <div className="mt-5 flex flex-wrap items-center justify-end gap-3 border-t border-line pt-4">
+                <ConfirmButton
+                  onConfirm={() => remove(dialog.item.id)}
+                  question="Xoá ghi chú này?"
+                  confirmLabel="Xoá"
+                  className="text-sm font-medium text-danger hover:underline"
+                >
+                  Xoá
+                </ConfirmButton>
+                <button onClick={() => openEdit(dialog.item)} className="btn-secondary btn-sm">
+                  Sửa
+                </button>
+              </div>
+            </div>
+          )}
+
+          {editing && (
+            <div>
+              <DialogTitle className="mb-3 pr-8 font-display text-lg font-semibold text-ink">
+                {dialog.mode === 'create' ? 'Thêm' : 'Sửa'} {cfg.label.toLowerCase()}
+              </DialogTitle>
+              <NoteForm
+                cfg={cfg}
+                value={draft}
+                onChange={setDraft}
+                classes={classes}
+                saving={saving}
+                submitLabel={dialog.mode === 'create' ? `Thêm ${cfg.label.toLowerCase()}` : 'Lưu'}
+                onSubmit={() => (dialog.mode === 'create' ? add() : saveEdit(dialog.item.id))}
+                onCancel={() =>
+                  dialog.mode === 'create' ? setDialog(null) : setDialog({ mode: 'view', item: dialog.item })
+                }
+              />
+              {error && <p className="mt-3 text-xs text-danger">{error}</p>}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
