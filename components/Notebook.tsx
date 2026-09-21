@@ -10,14 +10,22 @@ import RichText from '@/components/ui/RichText';
 import RichTextEditor, { RichTextToolbar } from '@/components/ui/RichTextEditor';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { cleanHtml, isEmptyHtml, sanitizeHtml } from '@/lib/rich-text';
+import { PARTS_OF_SPEECH, POS_MAP } from '@/lib/constants';
 
 type Cls = { id: string; name: string; language_code: string };
 type Kind = 'vocab' | 'grammar';
 // name / desc / example / synonyms là HTML (xem lib/rich-text.ts)
-type Draft = { name: string; desc: string; example: string; synonyms: string; classId: string };
+type Draft = {
+  name: string;
+  desc: string;
+  example: string;
+  synonyms: string;
+  classId: string;
+  pos: string; // chỉ dùng cho từ vựng
+};
 type DialogState = { mode: 'view' | 'edit'; item: any } | { mode: 'create'; item?: undefined };
 
-const EMPTY_DRAFT: Draft = { name: '', desc: '', example: '', synonyms: '', classId: '' };
+const EMPTY_DRAFT: Draft = { name: '', desc: '', example: '', synonyms: '', classId: '', pos: '' };
 
 const CFG = {
   vocab: {
@@ -28,6 +36,7 @@ const CFG = {
     namePh: 'Từ mới',
     descPh: 'Nghĩa',
     synPh: 'Từ đồng nghĩa',
+    hasPos: true,
     Icon: BookMarked,
     label: 'Từ vựng',
   },
@@ -39,6 +48,7 @@ const CFG = {
     namePh: 'Điểm ngữ pháp',
     descPh: 'Giải thích',
     synPh: 'Ngữ pháp đồng nghĩa',
+    hasPos: false,
     Icon: SpellCheck,
     label: 'Ngữ pháp',
   },
@@ -46,6 +56,16 @@ const CFG = {
 
 const ALL = '';
 const NONE = '__none__';
+
+function PosPill({ value, className }: { value?: string | null; className?: string }) {
+  const pos = value ? POS_MAP[value] : null;
+  if (!pos) return null;
+  return (
+    <span className={`pill bg-brand/10 text-brand ${className ?? ''}`} title={pos.label}>
+      {pos.abbr}
+    </span>
+  );
+}
 
 // Form thêm / sửa trong dialog: thanh định dạng, các ô nhập, nút lưu.
 function NoteForm({
@@ -103,6 +123,17 @@ function NoteForm({
             ...classes.map((c) => ({ value: c.id, label: c.name })),
           ]}
         />
+        {cfg.hasPos && (
+          <SimpleSelect
+            value={value.pos}
+            onChange={set('pos')}
+            aria-label="Từ loại"
+            options={[
+              { value: '', label: 'Chưa chọn từ loại' },
+              ...PARTS_OF_SPEECH.map((p) => ({ value: p.value, label: p.label })),
+            ]}
+          />
+        )}
       </div>
       <div className="mt-4 flex justify-end gap-2">
         <button type="button" onClick={onCancel} className="btn-ghost btn-sm">
@@ -146,6 +177,7 @@ export default function Notebook({
   const supabase = createClient();
   const [tab, setTab] = useState<Kind>('vocab');
   const [filter, setFilter] = useState<string>(ALL);
+  const [posFilter, setPosFilter] = useState<string>(ALL); // chỉ áp cho từ vựng
 
   const [lists, setLists] = useState<Record<Kind, any[]>>({
     vocab: initialVocab,
@@ -156,6 +188,8 @@ export default function Notebook({
     grammar: initialGrammar.length < pageSize,
   });
   const [loadingMore, setLoadingMore] = useState(false);
+  // bộ lọc của dữ liệu đang hiển thị từng tab (lần đầu server đã nạp không lọc)
+  const loadedKey = useRef<Record<Kind, string>>({ vocab: `${ALL}|${ALL}`, grammar: ALL });
   const loadingRef = useRef(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -175,25 +209,31 @@ export default function Notebook({
       .order('created_at', { ascending: false });
     if (filter === NONE) q = q.is('class_id', null);
     else if (filter) q = q.eq('class_id', filter);
+    if (kind === 'vocab' && posFilter) q = q.eq('part_of_speech', posFilter);
     return q;
   }
 
   function matchesFilter(row: any) {
-    return filter === ALL || (filter === NONE && !row.class_id) || row.class_id === filter;
+    const classOk =
+      filter === ALL || (filter === NONE && !row.class_id) || row.class_id === filter;
+    const posOk = tab !== 'vocab' || !posFilter || row.part_of_speech === posFilter;
+    return classOk && posOk;
   }
 
   function setList(k: Kind, fn: (prev: any[]) => any[]) {
     setLists((p) => ({ ...p, [k]: fn(p[k]) }));
   }
 
-  // đổi bộ lọc -> nạp lại cả hai danh sách từ đầu
+  // đổi bộ lọc -> nạp lại từ đầu danh sách nào bị ảnh hưởng (từ loại chỉ ảnh hưởng từ vựng)
   useEffect(() => {
-    if (filter === ALL) return; // lần đầu (ALL) đã có dữ liệu từ server
     let cancelled = false;
     (async () => {
       for (const k of ['vocab', 'grammar'] as Kind[]) {
+        const key = k === 'vocab' ? `${filter}|${posFilter}` : filter;
+        if (loadedKey.current[k] === key) continue;
         const { data } = await query(k).range(0, pageSize - 1);
         if (cancelled) return;
+        loadedKey.current[k] = key;
         const rows = data ?? [];
         setList(k, () => rows);
         setDone((p) => ({ ...p, [k]: rows.length < pageSize }));
@@ -203,7 +243,7 @@ export default function Notebook({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
+  }, [filter, posFilter]);
 
   // Lazy load: cuộn tới cuối bảng thì nạp thêm `pageSize` dòng. Phân trang theo mốc
   // created_at (không theo offset) nên thêm/xoá dòng giữa chừng không làm lệch trang.
@@ -233,7 +273,7 @@ export default function Notebook({
     io.observe(el);
     return () => io.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, filter, items.length, done[tab]]);
+  }, [tab, filter, posFilter, items.length, done[tab]]);
 
   function fields(d: Draft) {
     return {
@@ -241,6 +281,8 @@ export default function Notebook({
       [cfg.desc]: cleanHtml(d.desc),
       example_sentence: cleanHtml(d.example),
       synonyms: cleanHtml(d.synonyms),
+      // grammar_notes không có cột này
+      ...(cfg.hasPos ? { part_of_speech: d.pos || null } : {}),
     };
   }
 
@@ -258,6 +300,7 @@ export default function Notebook({
       example: sanitizeHtml(it.example_sentence ?? ''),
       synonyms: sanitizeHtml(it.synonyms ?? ''),
       classId: it.class_id ?? '',
+      pos: it.part_of_speech ?? '',
     });
     setDialog({ mode: 'edit', item: it });
   }
@@ -369,6 +412,18 @@ export default function Notebook({
               ...classes.map((c) => ({ value: c.id, label: c.name })),
             ]}
           />
+          {cfg.hasPos && (
+            <SimpleSelect
+              value={posFilter}
+              onChange={setPosFilter}
+              className="w-auto min-w-[10rem]"
+              aria-label="Lọc theo từ loại"
+              options={[
+                { value: ALL, label: 'Tất cả từ loại' },
+                ...PARTS_OF_SPEECH.map((p) => ({ value: p.value, label: p.label })),
+              ]}
+            />
+          )}
           <button onClick={openCreate} className="btn-primary h-10">
             <Plus className="h-4 w-4" />
             Thêm
@@ -380,7 +435,8 @@ export default function Notebook({
         <table className="w-full table-fixed text-left text-sm">
           <thead className="border-b border-line bg-paper text-xs text-ink-faint">
             <tr>
-              <th className="w-2/5 px-3 py-2 font-medium">{cfg.nameCol}</th>
+              <th className="w-[35%] px-3 py-2 font-medium">{cfg.nameCol}</th>
+              {cfg.hasPos && <th className="w-20 px-3 py-2 font-medium sm:w-28">Từ loại</th>}
               <th className="px-3 py-2 font-medium">{cfg.descPh}</th>
             </tr>
           </thead>
@@ -405,6 +461,11 @@ export default function Notebook({
                 <td className="px-3 py-2.5 font-semibold text-ink">
                   <RichText html={it[cfg.name] ?? ''} className="line-clamp-2 break-words" />
                 </td>
+                {cfg.hasPos && (
+                  <td className="px-3 py-2.5">
+                    <PosPill value={it.part_of_speech} />
+                  </td>
+                )}
                 <td className="px-3 py-2.5 text-ink-soft">
                   <RichText html={it[cfg.desc] ?? ''} className="line-clamp-2 break-words" />
                 </td>
@@ -414,7 +475,8 @@ export default function Notebook({
         </table>
         {items.length === 0 && (
           <p className="py-6 text-center text-sm text-ink-faint">
-            Chưa có {cfg.label.toLowerCase()} nào{filter ? ' cho lựa chọn này' : ''}.
+            Chưa có {cfg.label.toLowerCase()} nào
+            {filter || (cfg.hasPos && posFilter) ? ' cho lựa chọn này' : ''}.
           </p>
         )}
       </div>
@@ -444,6 +506,7 @@ export default function Notebook({
                 html={dialog.item[cfg.name] ?? ''}
                 className="mt-1 pr-8 font-display text-xl font-semibold text-ink"
               />
+              <PosPill value={dialog.item.part_of_speech} className="mt-2" />
               <Section label={cfg.descPh} html={dialog.item[cfg.desc]} />
               <Section label="Câu ví dụ" html={dialog.item.example_sentence} />
               <Section label="Đồng nghĩa" html={dialog.item.synonyms} />

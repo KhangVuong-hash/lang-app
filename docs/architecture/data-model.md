@@ -28,7 +28,7 @@ writing_topics (class_id, teacher_id, topic_type: essay|translation, prompt, sou
        UNIQUE(topic_id, student_id)
        └─ writing_reviews (submission_id, teacher_id, feedback, score, inline_comments jsonb)
 
-vocabulary_notes / grammar_notes (user_id → profiles, class_id?, language_code?, synonyms?)  - sổ tay riêng
+vocabulary_notes (+ part_of_speech?) / grammar_notes (user_id → profiles, class_id?, language_code?, synonyms?)  - sổ tay riêng
 ```
 
 ## Trigger
