@@ -28,7 +28,7 @@ writing_topics (class_id, teacher_id, topic_type: essay|translation, prompt, sou
        UNIQUE(topic_id, student_id)
        └─ writing_reviews (submission_id, teacher_id, feedback, score, inline_comments jsonb)
 
-vocabulary_notes / grammar_notes (user_id → profiles, class_id?, language_code?)  - sổ tay riêng
+vocabulary_notes / grammar_notes (user_id → profiles, class_id?, language_code?, synonyms?)  - sổ tay riêng
 ```
 
 ## Trigger
@@ -67,3 +67,8 @@ Riêng `writing_submissions` có thêm policy `FOR UPDATE` cho giáo viên (đ�
 Bucket `speaking-recordings` (private). Quy ước path: `{user_id}/{segment_id}-{timestamp}.webm`.
 Policy: chủ sở hữu upload/đọc file trong thư mục tên bằng `auth.uid()`. Giáo viên nghe lại
 bài học sinh → dự kiến dùng signed URL sinh phía server (service role) - **chưa làm**.
+
+**Sổ tay = HTML:** các cột chữ của `vocabulary_notes` / `grammar_notes` (`term`/`title`,
+`meaning`/`explanation`, `example_sentence`, `synonyms`) lưu HTML chỉ gồm `b strong i em u br p div`
+(không thuộc tính). `lib/rich-text.ts` lọc khi lưu và khi render; nhập qua
+`components/ui/RichTextEditor.tsx`, hiển thị qua `components/ui/RichText.tsx`.

@@ -34,6 +34,9 @@
 | `LessonRow.tsx` | Hàng bài học trong danh sách |
 | `StatusPill.tsx` | Pill trạng thái có chấm |
 | `EmptyState.tsx` | Trạng thái rỗng |
+| `dialog.tsx` | Dialog (Radix, kiểu shadcn) - dùng cho xem / thêm / sửa ghi chú sổ tay |
+| `RichTextEditor.tsx` | Ô nhiều dòng in đậm / nghiêng / gạch chân (contentEditable, giá trị là HTML) + `RichTextToolbar` |
+| `RichText.tsx` | Hiển thị HTML của sổ tay sau khi lọc (`lib/rich-text.ts`) |
 
 ## Marketing
 
