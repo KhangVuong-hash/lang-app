@@ -78,3 +78,24 @@ export const ROLE_LABEL: Record<string, string> = {
 export function tint(hex: string, alphaHex: string): string {
   return `${hex}${alphaHex}`;
 }
+
+export type PartOfSpeech = { value: string; abbr: string; label: string };
+
+/** Từ loại của từ vựng (cột vocabulary_notes.part_of_speech lưu `value`) */
+export const PARTS_OF_SPEECH: PartOfSpeech[] = [
+  { value: 'noun', abbr: 'n', label: 'Danh từ (noun)' },
+  { value: 'verb', abbr: 'v', label: 'Động từ (verb)' },
+  { value: 'phrasal_verb', abbr: 'phr v', label: 'Cụm động từ (phrasal verb)' },
+  { value: 'adjective', abbr: 'adj', label: 'Tính từ (adjective)' },
+  { value: 'adverb', abbr: 'adv', label: 'Trạng từ (adverb)' },
+  { value: 'preposition', abbr: 'prep', label: 'Giới từ (preposition)' },
+  { value: 'conjunction', abbr: 'conj', label: 'Liên từ (conjunction)' },
+  { value: 'pronoun', abbr: 'pron', label: 'Đại từ (pronoun)' },
+  { value: 'idiom', abbr: 'idiom', label: 'Thành ngữ (idiom)' },
+  { value: 'collocation', abbr: 'colloc', label: 'Cụm từ cố định (collocation)' },
+  { value: 'other', abbr: 'khác', label: 'Khác' },
+];
+
+export const POS_MAP: Record<string, PartOfSpeech> = Object.fromEntries(
+  PARTS_OF_SPEECH.map((p) => [p.value, p])
+);
