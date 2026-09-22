@@ -192,6 +192,12 @@ export default function Notebook({
   const loadedKey = useRef<Record<Kind, string>>({ vocab: `${ALL}|${ALL}`, grammar: ALL });
   const loadingRef = useRef(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  // nhớ dữ liệu đã nạp theo từng tổ hợp tab + bộ lọc, để bấm qua lại filter cũ
+  // không phải gọi Supabase lại (chỉ tồn tại trong lần vào trang này, mất khi rời trang)
+  const cache = useRef<Record<string, { rows: any[]; done: boolean }>>({
+    [`vocab:${ALL}|${ALL}`]: { rows: initialVocab, done: initialVocab.length < pageSize },
+    [`grammar:${ALL}`]: { rows: initialGrammar, done: initialGrammar.length < pageSize },
+  });
 
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
@@ -220,23 +226,35 @@ export default function Notebook({
     return classOk && posOk;
   }
 
-  function setList(k: Kind, fn: (prev: any[]) => any[]) {
-    setLists((p) => ({ ...p, [k]: fn(p[k]) }));
+  // cập nhật danh sách hiển thị và đồng bộ vào cache của bộ lọc đang xem
+  function setList(k: Kind, rows: any[], doneFlag?: boolean) {
+    setLists((p) => ({ ...p, [k]: rows }));
+    const key = loadedKey.current[k];
+    if (key) cache.current[`${k}:${key}`] = { rows, done: doneFlag ?? done[k] };
   }
 
-  // đổi bộ lọc -> nạp lại từ đầu danh sách nào bị ảnh hưởng (từ loại chỉ ảnh hưởng từ vựng)
+  // đổi bộ lọc -> dùng lại cache nếu đã từng nạp, không thì mới gọi Supabase
+  // (từ loại chỉ ảnh hưởng từ vựng)
   useEffect(() => {
     let cancelled = false;
     (async () => {
       for (const k of ['vocab', 'grammar'] as Kind[]) {
         const key = k === 'vocab' ? `${filter}|${posFilter}` : filter;
         if (loadedKey.current[k] === key) continue;
+        const cached = cache.current[`${k}:${key}`];
+        if (cached) {
+          loadedKey.current[k] = key;
+          setLists((p) => ({ ...p, [k]: cached.rows }));
+          setDone((p) => ({ ...p, [k]: cached.done }));
+          continue;
+        }
         const { data } = await query(k).range(0, pageSize - 1);
         if (cancelled) return;
         loadedKey.current[k] = key;
         const rows = data ?? [];
-        setList(k, () => rows);
-        setDone((p) => ({ ...p, [k]: rows.length < pageSize }));
+        const doneFlag = rows.length < pageSize;
+        setList(k, rows, doneFlag);
+        setDone((p) => ({ ...p, [k]: doneFlag }));
       }
     })();
     return () => {
@@ -256,8 +274,10 @@ export default function Notebook({
     loadingRef.current = false;
     setLoadingMore(false);
     const rows = data ?? [];
-    setList(tab, (p) => [...p, ...rows.filter((r) => !p.some((x) => x.id === r.id))]);
-    if (rows.length < pageSize) setDone((p) => ({ ...p, [tab]: true }));
+    const merged = [...items, ...rows.filter((r) => !items.some((x) => x.id === r.id))];
+    const doneFlag = rows.length < pageSize;
+    setList(tab, merged, doneFlag || done[tab]);
+    if (doneFlag) setDone((p) => ({ ...p, [tab]: true }));
   }
 
   // chạy lại sau mỗi lần nạp để kiểm tra sentinel còn trong khung nhìn không
@@ -331,7 +351,7 @@ export default function Notebook({
       return;
     }
     // chỉ hiện lên đầu danh sách nếu khớp bộ lọc hiện tại
-    if (matchesFilter(data)) setList(tab, (p) => [data, ...p]);
+    if (matchesFilter(data)) setList(tab, [data, ...items]);
     setDialog(null);
   }
 
@@ -355,8 +375,9 @@ export default function Notebook({
       setError(error.message);
       return;
     }
-    setList(tab, (p) =>
-      matchesFilter(data) ? p.map((x) => (x.id === id ? data : x)) : p.filter((x) => x.id !== id)
+    setList(
+      tab,
+      matchesFilter(data) ? items.map((x) => (x.id === id ? data : x)) : items.filter((x) => x.id !== id)
     );
     setDialog({ mode: 'view', item: data });
   }
@@ -373,7 +394,7 @@ export default function Notebook({
       setError(error.message);
       return;
     }
-    setList(tab, (p) => p.filter((x) => x.id !== id));
+    setList(tab, items.filter((x) => x.id !== id));
     setDialog(null);
   }
 
