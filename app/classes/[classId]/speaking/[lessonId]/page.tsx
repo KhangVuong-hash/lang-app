@@ -35,7 +35,7 @@ export default async function SpeakingLessonPage({
   const canRecord = access.isEnrolled;
 
   return (
-    <div className="container-page max-w-6xl py-8">
+    <div className="container-page py-8">
       <PageHeader
         back={{ href: `/classes/${params.classId}/speaking`, label: 'Bài shadowing' }}
         eyebrow="Kỹ năng Nói"

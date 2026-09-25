@@ -64,7 +64,7 @@ export default function NewClassPage() {
   }
 
   return (
-    <div className="container-page max-w-xl py-8">
+    <div className="container-page py-8">
       <PageHeader back={{ href: '/classes', label: 'Lớp học của tôi' }} title="Tạo lớp học mới" />
 
       <form onSubmit={handleSubmit} className="card space-y-4 p-5">

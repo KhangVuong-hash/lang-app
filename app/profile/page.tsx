@@ -61,7 +61,7 @@ export default async function ProfilePage() {
   const nextStudy = nextOccurrence((studyRules ?? []) as any[], (studyExceptions ?? []) as any[]);
 
   return (
-    <div className="container-page max-w-4xl py-8">
+    <div className="container-page pb-8 pt-6">
       <PageHeader eyebrow="Trang cá nhân" title={profile?.full_name ?? 'Chưa có tên'}>
         <span className="pill bg-highlight-soft text-ink">
           {ROLE_LABEL[profile?.role ?? 'user'] ?? 'Thành viên'}
@@ -112,7 +112,7 @@ export default async function ProfilePage() {
           </span>
           <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
         </Link>
-        <Link href="/notebook" className="card card-hover flex items-center justify-between p-5">
+        <Link href="/profile/notebook" className="card card-hover flex items-center justify-between p-5">
           <span className="flex items-center gap-2 font-display font-semibold text-ink">
             <NotebookPen className="h-5 w-5 text-brand" />
             Sổ tay từ vựng &amp; ngữ pháp

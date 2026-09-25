@@ -21,9 +21,8 @@ export default async function PersonalNotesPage() {
   const urls = await signImages(supabase, notes.map((n) => n.image_paths[0]).filter(Boolean));
 
   return (
-    <div className="container-page py-8">
+    <div className="container-page pb-8 pt-6">
       <PageHeader
-        back={{ href: '/profile', label: 'Trang cá nhân' }}
         eyebrow="Trang cá nhân"
         title="Ghi chú ~của tôi~"
         mark

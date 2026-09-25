@@ -7,6 +7,15 @@
 }
 
 @layer base {
+  /* luôn chừa chỗ cho thanh cuộn: trang ngắn/dài (hoặc màn loading) không làm
+     nội dung 80% bị giật ngang khi chuyển trang */
+  html {
+    scrollbar-gutter: stable;
+  }
+  /* đã chừa chỗ sẵn -> bỏ margin bù thanh cuộn mà Radix (Dialog/Select) thêm khi khoá cuộn */
+  html body[data-scroll-locked] {
+    margin-right: 0 !important;
+  }
   body {
     @apply bg-paper text-ink font-sans antialiased;
   }
@@ -23,8 +32,9 @@
 }
 
 @layer components {
+  /* mọi trang cùng một chiều rộng: 80% màn hình từ desktop, mobile full + lề 16px */
   .container-page {
-    @apply mx-auto w-full max-w-6xl px-4 sm:px-6;
+    @apply mx-auto w-full px-4 sm:px-6 lg:w-[80%] lg:px-0;
   }
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors disabled:pointer-events-none disabled:opacity-50;

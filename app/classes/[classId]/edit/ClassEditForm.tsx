@@ -53,7 +53,7 @@ export default function ClassEditForm({
   }
 
   return (
-    <div className="container-page max-w-xl py-8">
+    <div className="container-page py-8">
       <PageHeader
         back={{ href: `/classes/${klass.id}`, label: 'Tổng quan lớp' }}
         title="Sửa thông tin lớp"

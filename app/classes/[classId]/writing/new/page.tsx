@@ -50,7 +50,7 @@ export default function NewWritingTopicPage() {
   }
 
   return (
-    <div className="container-page max-w-2xl py-8">
+    <div className="container-page py-8">
       <PageHeader
         back={{ href: `/classes/${classId}/writing`, label: 'Chủ đề viết' }}
         title="Tạo chủ đề viết"

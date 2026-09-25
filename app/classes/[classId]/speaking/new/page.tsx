@@ -120,7 +120,7 @@ export default function NewSpeakingLessonPage() {
   }
 
   return (
-    <div className="container-page max-w-4xl space-y-6 py-8">
+    <div className="container-page space-y-6 py-8">
       {fetching && <LoadingOverlay label="Đang lấy script từ video…" />}
       <h1 className="text-2xl font-bold sm:text-3xl">Tạo bài shadowing mới</h1>
 

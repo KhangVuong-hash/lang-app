@@ -19,7 +19,7 @@ export default async function AdminPage() {
     .order('created_at', { ascending: false });
 
   return (
-    <div className="container-page max-w-5xl py-8">
+    <div className="container-page py-8">
       <PageHeader eyebrow="Quản trị" title="Người dùng và lớp học" />
 
       <div className="card p-5">

@@ -43,8 +43,7 @@ export async function middleware(request: NextRequest) {
   const isProtectedRoute =
     path.startsWith('/classes') ||
     path.startsWith('/admin') ||
-    path.startsWith('/profile') ||
-    path.startsWith('/notebook');
+    path.startsWith('/profile');
 
   if (!user && isProtectedRoute) {
     return NextResponse.redirect(new URL('/login', request.url));

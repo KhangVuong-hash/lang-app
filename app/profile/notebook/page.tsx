@@ -43,9 +43,8 @@ export default async function NotebookPage() {
   }
 
   return (
-    <div className="container-page max-w-3xl py-8">
+    <div className="container-page pb-8 pt-6">
       <PageHeader
-        back={{ href: '/profile', label: 'Trang cá nhân' }}
         eyebrow="Sổ tay"
         title="Từ vựng và ngữ pháp"
       />
