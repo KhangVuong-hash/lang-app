@@ -1,4 +1,6 @@
+import { cache } from 'react';
 import { createClient } from '@/lib/supabase/server';
+import { getMyProfile, getUser } from '@/lib/auth';
 import type { SkillKey } from '@/lib/constants';
 
 export type ClassAccess = {
@@ -22,23 +24,20 @@ export type ClassAccess = {
  * Trả về quyền của user hiện tại với một lớp, hoặc null nếu chưa đăng nhập /
  * lớp không tồn tại / không có quyền xem (RLS đã lọc sẵn `classes`).
  */
-export async function getClassAccess(classId: string): Promise<ClassAccess | null> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export const getClassAccess = cache(async (classId: string): Promise<ClassAccess | null> => {
+  const user = await getUser();
   if (!user) return null;
 
-  const { data: klass } = await supabase
-    .from('classes')
-    .select('*, languages(name)')
-    .eq('id', classId)
-    .is('deleted_at', null)
-    .single();
-  if (!klass) return null;
-
-  const [{ data: profile }, { data: enr }, { data: skillRows }] = await Promise.all([
-    supabase.from('profiles').select('role').eq('id', user.id).maybeSingle(),
+  const supabase = createClient();
+  // mọi truy vấn chạy song song; layout + page trong cùng request dùng chung kết quả (cache)
+  const [{ data: klass }, profile, { data: enr }, { data: skillRows }] = await Promise.all([
+    supabase
+      .from('classes')
+      .select('*, languages(name)')
+      .eq('id', classId)
+      .is('deleted_at', null)
+      .maybeSingle(),
+    getMyProfile(),
     supabase
       .from('enrollments')
       .select('status')
@@ -47,6 +46,7 @@ export async function getClassAccess(classId: string): Promise<ClassAccess | nul
       .maybeSingle(),
     supabase.from('class_skills').select('skill_type, is_enabled').eq('class_id', classId),
   ]);
+  if (!klass) return null;
 
   const isAdmin = profile?.role === 'admin';
   const isTeacher = klass.teacher_id === user.id;
@@ -67,4 +67,4 @@ export async function getClassAccess(classId: string): Promise<ClassAccess | nul
     canManage,
     canView: canManage || isEnrolled,
   };
-}
+});

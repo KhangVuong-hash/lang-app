@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { NotebookPen, ChevronRight, CalendarDays, StickyNote } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { getMyProfile, getUser } from '@/lib/auth';
 import PageHeader from '@/components/ui/PageHeader';
 import LanguageCrest from '@/components/ui/LanguageCrest';
 import { ROLE_LABEL } from '@/lib/constants';
@@ -30,18 +31,16 @@ function ClassList({ title, items }: { title: string; items: any[] }) {
 
 export default async function ProfilePage() {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
   const [
-    { data: profile },
+    profile,
     { data: teaching },
     { data: enrollments },
     { data: studyRules },
     { data: studyExceptions },
   ] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user?.id).maybeSingle(),
+    getMyProfile(),
     supabase
       .from('classes')
       .select('id, name, language_code')

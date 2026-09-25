@@ -1,19 +1,12 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { getMyProfile, getUser } from '@/lib/auth';
 import Landing from '@/components/marketing/Landing';
 
 export default async function HomePage() {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
   if (user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle();
+    const profile = await getMyProfile();
     redirect(profile?.role === 'admin' ? '/admin' : '/classes');
   }
 
