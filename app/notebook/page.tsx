@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { getUser } from '@/lib/auth';
 import PageHeader from '@/components/ui/PageHeader';
 import Notebook from '@/components/Notebook';
 
@@ -6,9 +7,7 @@ const PAGE = 10;
 
 export default async function NotebookPage() {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
   const [{ data: teaching }, { data: enrollments }, { data: vocab }, { data: grammar }] =
     await Promise.all([

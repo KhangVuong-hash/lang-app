@@ -33,9 +33,10 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims(): tự refresh session hết hạn (ghi lại cookie) rồi kiểm tra chữ ký JWT
+  // tại chỗ bằng JWKS - không tốn round-trip tới Auth như getUser() (trừ project HS256).
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const user = claimsData?.claims?.sub ? { id: claimsData.claims.sub } : null;
 
   const path = request.nextUrl.pathname;
   const isAuthRoute = path.startsWith('/login') || path.startsWith('/register');

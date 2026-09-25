@@ -1,13 +1,12 @@
 import { createClient } from '@/lib/supabase/server';
+import { getUser } from '@/lib/auth';
 import PageHeader from '@/components/ui/PageHeader';
 import PersonalNotes from '@/components/notes/PersonalNotes';
 import { NOTES_PAGE_SIZE, NOTE_COLUMNS, signImages, type PersonalNote } from '@/lib/personal-notes';
 
 export default async function PersonalNotesPage() {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
   // RLS chỉ trả về ghi chú của chính mình
   const { data } = await supabase

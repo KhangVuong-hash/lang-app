@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import { getMyProfile, getUser } from '@/lib/auth';
 import PageHeader from '@/components/ui/PageHeader';
 import ClassCard from '@/components/ui/ClassCard';
 import EmptyState from '@/components/ui/EmptyState';
@@ -16,15 +17,10 @@ function enabledOf(row: any): SkillKey[] {
 
 export default async function ClassesDashboard() {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
-  const { data: me } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user?.id)
-    .maybeSingle();
+  // AppShell đã tải profile trong cùng request -> lấy lại từ cache, không tốn truy vấn
+  const me = await getMyProfile();
   const isAdmin = me?.role === 'admin';
 
   const [{ data: teaching }, { data: enrollments }, { data: invites }, { data: allClasses }] =
