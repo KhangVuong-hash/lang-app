@@ -42,7 +42,7 @@ export default async function TeacherTopicView({
   const list = submissions ?? [];
 
   return (
-    <div className="container-page max-w-3xl py-8">
+    <div className="container-page py-8">
       <PageHeader
         back={{ href: `/classes/${classId}/writing`, label: 'Chủ đề viết' }}
         eyebrow={topic.topic_type === 'essay' ? 'Bài luận' : 'Dịch đoạn văn'}

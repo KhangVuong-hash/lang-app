@@ -17,9 +17,8 @@ export default async function StudySchedulePage() {
   ]);
 
   return (
-    <div className="container-page py-8">
+    <div className="container-page pb-8 pt-6">
       <PageHeader
-        back={{ href: '/profile', label: 'Trang cá nhân' }}
         eyebrow="Trang cá nhân"
         title="Thời khóa biểu ~tự học~"
         mark

@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Sổ tay đã chuyển vào trang cá nhân
+  async redirects() {
+    return [{ source: '/notebook', destination: '/profile/notebook', permanent: true }];
+  },
   experimental: {
     serverActions: { allowedOrigins: ['localhost:3000'] },
     // Quay lại trang vừa xem (điều hướng trong app) dùng dữ liệu đã cache thay vì

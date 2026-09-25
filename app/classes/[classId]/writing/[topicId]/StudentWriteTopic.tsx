@@ -75,7 +75,7 @@ export default function StudentWriteTopic({
   if (!topic) return <RouteLoading label="Đang tải bài viết…" />;
 
   return (
-    <div className="container-page max-w-2xl py-8">
+    <div className="container-page py-8">
       <a
         href={`/classes/${classId}/writing`}
         className="mb-3 inline-flex items-center gap-1 text-sm text-ink-soft hover:text-ink"

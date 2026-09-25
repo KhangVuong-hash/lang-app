@@ -57,7 +57,7 @@ export default function LessonInfoForm({
   }
 
   return (
-    <div className="container-page max-w-xl py-8">
+    <div className="container-page py-8">
       <PageHeader back={{ href: `${backHref}/${lesson.id}`, label: 'Bài học' }} title={heading} />
 
       <form onSubmit={handleSubmit} className="card space-y-4 p-5">

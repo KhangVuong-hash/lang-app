@@ -50,11 +50,7 @@ export default function AppNav({
 
         <nav className="hidden items-center gap-1 md:flex">
           {links.map((l) => {
-            const active =
-              pathname === l.href ||
-              pathname.startsWith(l.href + '/') ||
-              // sổ tay mở từ trang cá nhân
-              (l.href === '/profile' && pathname.startsWith('/notebook'));
+            const active = pathname === l.href || pathname.startsWith(l.href + '/');
             return (
               <Link
                 key={l.href}

@@ -52,7 +52,7 @@ export default function WritingTopicForm({
   }
 
   return (
-    <div className="container-page max-w-2xl py-8">
+    <div className="container-page py-8">
       <PageHeader
         back={{ href: `/classes/${classId}/writing/${topic.id}`, label: 'Chủ đề viết' }}
         title="Sửa chủ đề viết"
