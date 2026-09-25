@@ -29,6 +29,12 @@ writing_topics (class_id, teacher_id, topic_type: essay|translation, prompt, sou
        └─ writing_reviews (submission_id, teacher_id, feedback, score, inline_comments jsonb)
 
 vocabulary_notes (+ part_of_speech?) / grammar_notes (user_id → profiles, class_id?, language_code?, synonyms?)  - sổ tay riêng
+
+study_schedules (owner_id → profiles, weekdays smallint[], start/end_time, starts_on, ends_on?, interval_weeks)  - thời khóa biểu tự học
+  └─ study_schedule_exceptions (schedule_id, owner_id, occurs_on, status: cancelled|rescheduled, new_date/start/end?)
+       UNIQUE(schedule_id, occurs_on)
+
+personal_notes (owner_id → profiles, title?, content? (HTML), image_paths text[] ≤ 20, pinned)  - ghi chú cá nhân
 ```
 
 ## Trigger
@@ -65,6 +71,12 @@ Riêng `writing_submissions` có thêm policy `FOR UPDATE` cho giáo viên (đ�
 ## Storage
 
 Bucket `speaking-recordings` (private). Quy ước path: `{user_id}/{segment_id}-{timestamp}.webm`.
+
+Bucket `personal-notes` (private, chỉ nhận `image/webp` ≤ 2MB): ảnh đính kèm ghi chú cá nhân,
+path `{user_id}/{uuid}.webp`. App (`lib/personal-notes.ts`) chỉ nhận JPG/PNG/WebP ≤ 2MB, đổi
+sang WebP bằng canvas và đặt tên uuid (không giữ tên file gốc) trước khi upload. Chủ sở hữu
+upload/đọc/xoá trong thư mục của mình; ảnh hiển thị qua signed URL (1 giờ). Gỡ ảnh khỏi ghi
+chú → xoá file khi lưu; đóng hộp thoại không lưu → xoá ảnh vừa upload.
 Policy: chủ sở hữu upload/đọc file trong thư mục tên bằng `auth.uid()`. Giáo viên nghe lại
 bài học sinh → dự kiến dùng signed URL sinh phía server (service role) - **chưa làm**.
 
@@ -72,3 +84,9 @@ bài học sinh → dự kiến dùng signed URL sinh phía server (service role
 `meaning`/`explanation`, `example_sentence`, `synonyms`) lưu HTML chỉ gồm `b strong i em u br p div`
 (không thuộc tính). `lib/rich-text.ts` lọc khi lưu và khi render; nhập qua
 `components/ui/RichTextEditor.tsx`, hiển thị qua `components/ui/RichText.tsx`.
+
+**Thời khóa biểu tự học:** mỗi user tự xếp lịch cho bản thân tại `/profile/schedule`
+(owner-only như sổ tay). DB chỉ lưu *quy tắc lặp* theo tuần (buổi đơn lẻ = `starts_on = ends_on`)
+và *ngoại lệ* cho từng buổi (huỷ / dời). Các buổi cụ thể được sinh trong app bởi
+`lib/schedule.ts` (`expandOccurrences`) - ngày là chuỗi `YYYY-MM-DD` giờ địa phương, không đổi múi giờ.
+Xoá lịch = soft delete (`deleted_at`).
