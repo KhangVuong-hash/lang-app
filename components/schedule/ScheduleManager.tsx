@@ -2,15 +2,17 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CalendarPlus, Copy, Pencil } from 'lucide-react';
+import { CalendarPlus, Check, Copy, Pencil, Tags, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import SimpleSelect from '@/components/ui/SimpleSelect';
 import Spinner from '@/components/ui/Spinner';
 import TimePicker from '@/components/ui/TimePicker';
 import ConfirmButton from '@/components/ui/ConfirmButton';
-import MonthView, { RULE_COLORS } from '@/components/schedule/MonthView';
+import MonthView from '@/components/schedule/MonthView';
 import DayView from '@/components/schedule/DayView';
+import CategoryManager from '@/components/schedule/CategoryManager';
+import { categoryColor } from '@/components/schedule/categoryColors';
 import {
   WEEKDAY_SHORT,
   WEEK_ORDER,
@@ -24,12 +26,15 @@ import {
   minutesBetween,
   mondayOf,
   nowLocalTime,
+  logKey,
   ruleDates,
   todayLocal,
   weekdayOf,
   type Occurrence,
   type ScheduleException,
   type ScheduleRule,
+  type SessionLog,
+  type StudyCategory,
 } from '@/lib/schedule';
 
 type RuleDialogState = {
@@ -44,25 +49,19 @@ type RuleDialogState = {
 const MAX_REPEAT_SESSIONS = 200;
 
 /**
- * Màu theo tiêu đề (các buổi tạo cùng lúc bằng "lặp hằng tuần" cùng màu),
- * không có tiêu đề thì theo id. Không đổi khi sửa ngày/giờ.
- */
-function colorKey(key: string) {
-  let h = 0;
-  for (const c of key) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  return RULE_COLORS[h % RULE_COLORS.length];
-}
-
-/**
  * Thời khóa biểu tự học: sidebar thống kê hôm nay / tuần / tháng + lịch tháng.
  * Thêm/sửa/xoá lịch, huỷ/dời từng buổi (hộp thoại hoặc kéo-thả trên lịch).
  */
 export default function ScheduleManager({
   rules: serverRules,
   exceptions: serverExceptions,
+  categories,
+  logs,
 }: {
   rules: ScheduleRule[];
   exceptions: ScheduleException[];
+  categories: StudyCategory[];
+  logs: SessionLog[];
 }) {
   const router = useRouter();
   const supabase = createClient();
@@ -78,6 +77,7 @@ export default function ScheduleManager({
   const [month, setMonth] = useState(() => todayLocal().slice(0, 7));
   const [day, setDay] = useState(() => todayLocal());
   const [focusId, setFocusId] = useState<string | null>(null);
+  const [categoryDialog, setCategoryDialog] = useState(false);
 
   // giờ hiện tại chỉ tính ở client (tránh lệch khi hydrate), cập nhật mỗi phút
   const [now, setNow] = useState<{ date: string; time: string } | null>(null);
@@ -189,8 +189,18 @@ export default function ScheduleManager({
   }
 
   const focused = rules.find((r) => r.id === focusId) ?? null;
-  const titleById = useMemo(() => new Map(rules.map((r) => [r.id, r.title])), [rules]);
-  const colorOf = (id: string) => colorKey(titleById.get(id)?.trim() || id);
+  // màu theo danh mục của buổi; chưa phân loại thì màu xám
+  const colorById = useMemo(() => {
+    const catColor = new Map(categories.map((c) => [c.id, c.color]));
+    return new Map(
+      rules.map((r) => [
+        r.id,
+        categoryColor(r.category_id ? catColor.get(r.category_id) : null).cls,
+      ])
+    );
+  }, [rules, categories]);
+  const colorOf = (id: string) => colorById.get(id) ?? categoryColor(null).cls;
+  const logByKey = useMemo(() => new Map(logs.map((l) => [logKey(l), l])), [logs]);
 
   const toolbar = (
     <>
@@ -276,7 +286,19 @@ export default function ScheduleManager({
                           {o.rule.location && ` · ${o.rule.location}`}
                         </span>
                       </span>
-                      {st && <span className={`pill shrink-0 ${st.cls}`}>{st.label}</span>}
+                      {logByKey.get(o.key)?.completed ? (
+                        <span className="pill shrink-0 bg-success/10 text-success">
+                          <Check className="h-3 w-3" />
+                          Hoàn thành
+                        </span>
+                      ) : logByKey.get(o.key) ? (
+                        <span className="pill shrink-0 bg-danger/10 text-danger">
+                          <X className="h-3 w-3" />
+                          Chưa xong
+                        </span>
+                      ) : (
+                        st && <span className={`pill shrink-0 ${st.cls}`}>{st.label}</span>
+                      )}
                     </button>
                   </li>
                 );
@@ -296,6 +318,41 @@ export default function ScheduleManager({
             <p className="font-display text-xl font-bold text-ink">{stats.monthCount} buổi</p>
             <p className="text-xs text-ink-soft">{rules.length} lịch đang có</p>
           </div>
+        </section>
+
+        <section className="card p-4">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-ink">Danh mục</h3>
+            <button
+              type="button"
+              onClick={() => setCategoryDialog(true)}
+              className="inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline"
+            >
+              <Tags className="h-3.5 w-3.5" />
+              Quản lý
+            </button>
+          </div>
+          {categories.length === 0 ? (
+            <p className="text-sm text-ink-faint">
+              Chưa có danh mục. Tạo danh mục (VD: Học tiếng Anh, Học trên lớp) để phân loại buổi học
+              và xem thống kê.
+            </p>
+          ) : (
+            <ul className="flex flex-wrap gap-1.5">
+              {categories.map((c) => (
+                <li
+                  key={c.id}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-line px-2 py-0.5 text-xs text-ink"
+                >
+                  <span
+                    className="h-2 w-2 rounded-full"
+                    style={{ backgroundColor: categoryColor(c.color).hex }}
+                  />
+                  {c.name}
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
         {stats.upcoming && (
@@ -327,6 +384,7 @@ export default function ScheduleManager({
             rules={rules}
             exceptions={exceptions}
             colorOf={colorOf}
+            logByKey={logByKey}
             focusId={focusId}
             onSelect={setOccurrence}
             onDayClick={(date) => {
@@ -346,6 +404,7 @@ export default function ScheduleManager({
             rules={rules}
             exceptions={exceptions}
             colorOf={colorOf}
+            logByKey={logByKey}
             focusId={focusId}
             now={now}
             onSelect={setOccurrence}
@@ -377,6 +436,8 @@ export default function ScheduleManager({
               key={ruleDialog.rule?.id ?? 'new'}
               rule={ruleDialog.rule}
               copyFrom={ruleDialog.copyFrom}
+              categories={categories}
+              onManageCategories={() => setCategoryDialog(true)}
               defaultDate={ruleDialog.date}
               defaultTime={ruleDialog.time}
               onDelete={removeRule}
@@ -398,6 +459,7 @@ export default function ScheduleManager({
             <OccurrenceForm
               key={occurrence.key}
               occurrence={occurrence}
+              log={logByKey.get(occurrence.key) ?? null}
               onEditRule={() => {
                 const rule = occurrence.rule;
                 setOccurrence(null);
@@ -421,6 +483,15 @@ export default function ScheduleManager({
           )}
         </DialogContent>
       </Dialog>
+
+      <Dialog open={categoryDialog} onOpenChange={setCategoryDialog}>
+        <DialogContent className="max-w-md">
+          <DialogTitle className="mb-4 pr-8 font-display text-lg font-semibold text-ink">
+            Danh mục
+          </DialogTitle>
+          <CategoryManager categories={categories} onChange={() => router.refresh()} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -428,6 +499,8 @@ export default function ScheduleManager({
 function RuleForm({
   rule,
   copyFrom,
+  categories,
+  onManageCategories,
   defaultDate,
   defaultTime,
   onDelete,
@@ -436,6 +509,8 @@ function RuleForm({
   rule?: ScheduleRule;
   /** buổi được nhân bản (khi thêm mới) */
   copyFrom?: ScheduleRule;
+  categories: StudyCategory[];
+  onManageCategories: () => void;
   /** ngày được bấm trên lịch tháng (khi thêm mới) */
   defaultDate?: string;
   /** giờ bắt đầu được bấm trên lịch ngày (khi thêm mới), dạng 'HH:MM' */
@@ -469,6 +544,7 @@ function RuleForm({
   const [intervalWeeks, setIntervalWeeks] = useState(String(rule?.interval_weeks ?? 1));
   const [location, setLocation] = useState(src?.location ?? '');
   const [note, setNote] = useState(src?.note ?? '');
+  const [categoryId, setCategoryId] = useState(src?.category_id ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -491,6 +567,7 @@ function RuleForm({
         interval_weeks: Number(intervalWeeks),
         location: null,
         note: null,
+        category_id: null,
       },
       startsOn,
       endsOn
@@ -513,6 +590,7 @@ function RuleForm({
       interval_weeks: 1,
       location: location.trim() || null,
       note: note.trim() || null,
+      category_id: categoryId || null,
     };
 
     // lặp hằng tuần = tạo sẵn từng buổi đơn lẻ, độc lập với nhau (sửa/xoá riêng từng buổi)
@@ -558,6 +636,7 @@ function RuleForm({
       interval_weeks: once ? 1 : Number(intervalWeeks),
       location: location.trim() || null,
       note: note.trim() || null,
+      category_id: categoryId || null,
     };
 
     setSaving(true);
@@ -598,6 +677,28 @@ function RuleForm({
           onChange={(e) => setTitle(e.target.value)}
           className="input"
           placeholder="VD: Luyện nói, Ôn thi N4…"
+        />
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between gap-2">
+          <label className="field-label">Danh mục</label>
+          <button
+            type="button"
+            onClick={onManageCategories}
+            className="mb-1 text-xs font-medium text-brand hover:underline"
+          >
+            Quản lý danh mục
+          </button>
+        </div>
+        <SimpleSelect
+          value={categoryId}
+          onChange={setCategoryId}
+          aria-label="Danh mục"
+          options={[
+            { value: '', label: 'Chưa phân loại' },
+            ...categories.map((c) => ({ value: c.id, label: c.name })),
+          ]}
         />
       </div>
 
@@ -737,13 +838,146 @@ function RuleForm({
   );
 }
 
+/**
+ * Đánh dấu buổi đã hoàn thành / không hoàn thành (cho trang thống kê).
+ * Hoàn thành thì nhập thời gian học thực tế, mặc định bằng thời lượng dự kiến.
+ */
+function CompletionForm({
+  occurrence,
+  log,
+  onDone,
+}: {
+  occurrence: Occurrence;
+  log: SessionLog | null;
+  onDone: () => void;
+}) {
+  const supabase = createClient();
+  const planned = minutesBetween(occurrence.start, occurrence.end);
+  const [completed, setCompleted] = useState<boolean | null>(log?.completed ?? null);
+  const initial = log?.actual_minutes ?? planned;
+  const [hours, setHours] = useState(String(Math.floor(initial / 60)));
+  const [minutes, setMinutes] = useState(String(initial % 60));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    setError(null);
+    if (completed === null) return setError('Chọn hoàn thành hoặc không hoàn thành.');
+    const total = (Number(hours) || 0) * 60 + (Number(minutes) || 0);
+    if (completed && (total < 1 || total > 1440))
+      return setError('Thời gian học thực tế phải từ 1 phút đến 24 giờ.');
+    setSaving(true);
+    const { error } = await supabase.from('study_session_logs').upsert(
+      {
+        schedule_id: occurrence.rule.id,
+        occurs_on: occurrence.originalDate,
+        completed,
+        actual_minutes: completed ? total : null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'schedule_id,occurs_on' }
+    );
+    setSaving(false);
+    if (error) return setError(error.message);
+    onDone();
+  }
+
+  async function clear() {
+    if (!log) return;
+    const { error } = await supabase.from('study_session_logs').delete().eq('id', log.id);
+    if (error) return setError(error.message);
+    onDone();
+  }
+
+  return (
+    <section className="space-y-3 rounded-lg border border-line p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold text-ink">Kết quả buổi học</h3>
+        {log && (
+          <button
+            type="button"
+            onClick={clear}
+            className="text-xs font-medium text-ink-soft hover:text-ink hover:underline"
+          >
+            Bỏ đánh dấu
+          </button>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setCompleted(true)}
+          aria-pressed={completed === true}
+          className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium ${
+            completed === true
+              ? 'border-success bg-success text-white'
+              : 'border-line text-ink-soft hover:bg-paper'
+          }`}
+        >
+          <Check className="h-4 w-4" />
+          Hoàn thành
+        </button>
+        <button
+          type="button"
+          onClick={() => setCompleted(false)}
+          aria-pressed={completed === false}
+          className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium ${
+            completed === false
+              ? 'border-danger bg-danger text-white'
+              : 'border-line text-ink-soft hover:bg-paper'
+          }`}
+        >
+          <X className="h-4 w-4" />
+          Không hoàn thành
+        </button>
+      </div>
+      {completed && (
+        <div>
+          <label className="field-label">Thời gian học thực tế</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={0}
+              max={24}
+              value={hours}
+              onChange={(e) => setHours(e.target.value)}
+              className="input w-20"
+              aria-label="Số giờ"
+            />
+            <span className="text-sm text-ink-soft">giờ</span>
+            <input
+              type="number"
+              min={0}
+              max={59}
+              step={5}
+              value={minutes}
+              onChange={(e) => setMinutes(e.target.value)}
+              className="input w-20"
+              aria-label="Số phút"
+            />
+            <span className="text-sm text-ink-soft">phút</span>
+          </div>
+          <p className="mt-1 text-xs text-ink-faint">Dự kiến: {formatDuration(planned)}</p>
+        </div>
+      )}
+      {error && <p className="text-sm text-danger">{error}</p>}
+      <button type="button" onClick={save} disabled={saving} className="btn-secondary btn-sm">
+        {saving && <Spinner />}
+        Lưu kết quả
+      </button>
+    </section>
+  );
+}
+
 function OccurrenceForm({
   occurrence,
+  log,
   onEditRule,
   onDuplicate,
   onDone,
 }: {
   occurrence: Occurrence;
+  log: SessionLog | null;
   onEditRule: () => void;
   onDuplicate: () => void;
   onDone: () => void;
@@ -819,6 +1053,10 @@ function OccurrenceForm({
           </button>
         </div>
       </div>
+
+      {occurrence.status !== 'cancelled' && (
+        <CompletionForm occurrence={occurrence} log={log} onDone={onDone} />
+      )}
 
       {ex && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-highlight-soft/60 px-3 py-2 text-sm">

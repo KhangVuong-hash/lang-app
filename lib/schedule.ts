@@ -15,6 +15,23 @@ export type ScheduleRule = {
   interval_weeks: number;
   location: string | null;
   note: string | null;
+  category_id: string | null;
+};
+
+export type StudyCategory = {
+  id: string;
+  name: string;
+  /** vị trí trong CATEGORY_COLORS (components/schedule/categoryColors.ts) */
+  color: number;
+};
+
+/** Kết quả một buổi: đã hoàn thành (kèm số phút thực tế) hay không. */
+export type SessionLog = {
+  id: string;
+  schedule_id: string;
+  occurs_on: string;
+  completed: boolean;
+  actual_minutes: number | null;
 };
 
 export type ScheduleException = {
@@ -232,7 +249,14 @@ export function nextOccurrence(
   );
 }
 
+/** khoá của buổi trong study_session_logs, trùng với Occurrence.key */
+export function logKey(log: Pick<SessionLog, 'schedule_id' | 'occurs_on'>) {
+  return `${log.schedule_id}:${log.occurs_on}`;
+}
+
 export const SCHEDULE_COLUMNS =
-  'id, title, weekdays, start_time, end_time, starts_on, ends_on, interval_weeks, location, note';
+  'id, title, weekdays, start_time, end_time, starts_on, ends_on, interval_weeks, location, note, category_id';
+export const CATEGORY_COLUMNS = 'id, name, color';
+export const LOG_COLUMNS = 'id, schedule_id, occurs_on, completed, actual_minutes';
 export const EXCEPTION_COLUMNS =
   'id, schedule_id, occurs_on, status, new_date, new_start_time, new_end_time, note';

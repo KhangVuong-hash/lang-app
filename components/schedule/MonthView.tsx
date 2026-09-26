@@ -14,20 +14,24 @@ import {
   type Occurrence,
   type ScheduleException,
   type ScheduleRule,
+  type SessionLog,
 } from '@/lib/schedule';
 
 /** số buổi hiện trong một ô ngày trước khi gộp thành "+N" */
 const MAX_PER_DAY = 3;
 
-/** màu cho từng lịch, xoay vòng theo thứ tự */
-export const RULE_COLORS = [
-  'bg-brand text-white',
-  'bg-skill-speaking text-white',
-  'bg-skill-listening text-white',
-  'bg-skill-writing text-white',
-  'bg-skill-reading text-white',
-  'bg-highlight text-ink',
-];
+/** dấu ✓ (hoàn thành) / ✗ (không hoàn thành) trước tên buổi */
+export function logMark(log: SessionLog | undefined) {
+  if (!log) return null;
+  return (
+    <span
+      aria-label={log.completed ? 'Hoàn thành' : 'Không hoàn thành'}
+      className="mr-0.5 font-bold"
+    >
+      {log.completed ? '✓' : '✗'}
+    </span>
+  );
+}
 
 /**
  * Lịch tháng kiểu Google Calendar (T2 → CN, 6 hàng). `month` là 'YYYY-MM'.
@@ -40,6 +44,7 @@ export default function MonthView({
   rules,
   exceptions,
   colorOf,
+  logByKey,
   focusId,
   onSelect,
   onDayClick,
@@ -51,6 +56,8 @@ export default function MonthView({
   rules: ScheduleRule[];
   exceptions: ScheduleException[];
   colorOf: (ruleId: string) => string;
+  /** kết quả từng buổi (theo Occurrence.key) để hiện dấu ✓ / ✗ */
+  logByKey: Map<string, SessionLog>;
   focusId: string | null;
   onSelect: (o: Occurrence) => void;
   /** bấm vào ô ngày (mở lịch theo giờ của ngày đó) */
@@ -122,6 +129,7 @@ export default function MonthView({
           focusId && !dim ? 'ring-2 ring-ink/40 ring-offset-1' : ''
         } ${cancelled ? 'line-through opacity-50' : ''} ${compact ? '' : 'py-1'}`}
       >
+        {logMark(logByKey.get(o.key))}
         <span className="font-semibold">{o.start}</span> {o.rule.title || 'Tự học'}
         {o.status === 'rescheduled' && ' (dời)'}
       </button>
