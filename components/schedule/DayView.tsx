@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useRef, type ReactNode } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   addDays,
   expandOccurrences,
@@ -12,7 +12,7 @@ import {
   type Occurrence,
   type ScheduleException,
   type ScheduleRule,
-} from "@/lib/schedule";
+} from '@/lib/schedule';
 
 /** chiều cao một giờ trên lưới (px) */
 const HOUR_PX = 56;
@@ -20,7 +20,7 @@ const HOUR_PX = 56;
 const DEFAULT_SCROLL_HOUR = 7;
 
 const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
-const pad = (n: number) => String(n).padStart(2, "0");
+const pad = (n: number) => String(n).padStart(2, '0');
 
 type Placed = { o: Occurrence; col: number; cols: number };
 
@@ -30,12 +30,12 @@ type Placed = { o: Occurrence; col: number; cols: number };
  */
 function layout(items: Occurrence[]): Placed[] {
   const sorted = [...items].sort(
-    (a, b) => a.start.localeCompare(b.start) || b.end.localeCompare(a.end),
+    (a, b) => a.start.localeCompare(b.start) || b.end.localeCompare(a.end)
   );
   const out: Placed[] = [];
   let cluster: Placed[] = [];
   let colEnds: string[] = [];
-  let clusterEnd = "";
+  let clusterEnd = '';
 
   const flush = () => {
     for (const p of cluster) p.cols = colEnds.length;
@@ -92,10 +92,10 @@ export default function DayView({
 
   const items = useMemo(
     () => expandOccurrences(rules, exceptions, date, date),
-    [rules, exceptions, date],
+    [rules, exceptions, date]
   );
   const placed = useMemo(() => layout(items), [items]);
-  const active = items.filter((o) => o.status !== "cancelled");
+  const active = items.filter((o) => o.status !== 'cancelled');
   const total = active.reduce((n, o) => n + minutesBetween(o.start, o.end), 0);
 
   // khi đổi ngày: cuộn tới buổi đầu tiên (hoặc giờ hiện tại nếu là hôm nay)
@@ -105,14 +105,12 @@ export default function DayView({
     if (!el) return;
     let hour = DEFAULT_SCROLL_HOUR;
     if (firstStart) hour = Math.floor(toMin(firstStart) / 60);
-    if (date === today && now)
-      hour = Math.min(hour, Math.floor(toMin(now.time) / 60));
+    if (date === today && now) hour = Math.min(hour, Math.floor(toMin(now.time) / 60));
     el.scrollTop = Math.max(0, hour - 1) * HOUR_PX;
     // chỉ cuộn khi đổi ngày, không giật mỗi phút
   }, [date, firstStart]);
 
-  const nowTop =
-    now && date === today ? (toMin(now.time) / 60) * HOUR_PX : null;
+  const nowTop = now && date === today ? (toMin(now.time) / 60) * HOUR_PX : null;
 
   return (
     <div>
@@ -150,9 +148,7 @@ export default function DayView({
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="mr-1 font-display text-lg font-semibold">
-            {formatDate(date)}
-          </h2>
+          <h2 className="mr-1 font-display text-lg font-semibold">{formatDate(date)}</h2>
           {toolbar}
         </div>
       </div>
@@ -160,7 +156,7 @@ export default function DayView({
       <p className="mb-2 text-xs text-ink-soft">
         {active.length
           ? `${active.length} buổi · tổng ${formatDuration(total)}`
-          : "Không có buổi học nào trong ngày này."}
+          : 'Không có buổi học nào trong ngày này.'}
       </p>
 
       <div
@@ -176,9 +172,7 @@ export default function DayView({
                 className="relative text-right text-[11px] text-ink-faint"
                 style={{ height: HOUR_PX }}
               >
-                {h > 0 && (
-                  <span className="absolute -top-2 right-2">{pad(h)}:00</span>
-                )}
+                {h > 0 && <span className="absolute -top-2 right-2">{pad(h)}:00</span>}
               </div>
             ))}
           </div>
@@ -186,7 +180,7 @@ export default function DayView({
           {/* vùng sự kiện */}
           <div className="relative flex-1">
             {Array.from({ length: 48 }, (_, i) => {
-              const time = `${pad(Math.floor(i / 2))}:${i % 2 ? "30" : "00"}`;
+              const time = `${pad(Math.floor(i / 2))}:${i % 2 ? '30' : '00'}`;
               return (
                 <button
                   key={i}
@@ -194,9 +188,7 @@ export default function DayView({
                   onClick={() => onSlotClick(date, time)}
                   aria-label={`Thêm buổi học lúc ${time}`}
                   className={`block w-full hover:bg-paper ${
-                    i % 2
-                      ? "border-b border-line"
-                      : "border-b border-dashed border-line/60"
+                    i % 2 ? 'border-b border-line' : 'border-b border-dashed border-line/60'
                   }`}
                   style={{ height: HOUR_PX / 2 }}
                 />
@@ -205,24 +197,21 @@ export default function DayView({
 
             {placed.map(({ o, col, cols }) => {
               const top = (toMin(o.start) / 60) * HOUR_PX;
-              const height = Math.max(
-                (minutesBetween(o.start, o.end) / 60) * HOUR_PX,
-                HOUR_PX / 3,
-              );
+              const height = Math.max((minutesBetween(o.start, o.end) / 60) * HOUR_PX, HOUR_PX / 3);
               const dim = focusId && o.rule.id !== focusId;
-              const cancelled = o.status === "cancelled";
+              const cancelled = o.status === 'cancelled';
               const short = height < HOUR_PX * 0.75;
               return (
                 <button
                   key={o.key}
                   type="button"
                   onClick={() => onSelect(o)}
-                  title={`${o.start}-${o.end}${o.rule.title ? ` · ${o.rule.title}` : ""}`}
+                  title={`${o.start}-${o.end}${o.rule.title ? ` · ${o.rule.title}` : ''}`}
                   className={`absolute overflow-hidden rounded-md border border-white/60 px-1.5 py-0.5 text-left text-xs shadow-sm transition-opacity hover:z-10 hover:shadow-md ${colorOf(
-                    o.rule.id,
-                  )} ${dim ? "opacity-25" : ""} ${
-                    focusId && !dim ? "ring-2 ring-ink/40 ring-offset-1" : ""
-                  } ${cancelled ? "line-through opacity-50" : ""}`}
+                    o.rule.id
+                  )} ${dim ? 'opacity-25' : ''} ${
+                    focusId && !dim ? 'ring-2 ring-ink/40 ring-offset-1' : ''
+                  } ${cancelled ? 'line-through opacity-50' : ''}`}
                   style={{
                     top,
                     height,
@@ -232,24 +221,20 @@ export default function DayView({
                 >
                   {short ? (
                     <span className="block truncate">
-                      <span className="font-semibold">
-                        {o.rule.title || "Tự học"}
-                      </span>{" "}
-                      {o.start}-{o.end}
+                      <span className="font-semibold">{o.rule.title || 'Tự học'}</span> {o.start}-
+                      {o.end}
                     </span>
                   ) : (
                     <>
                       <span className="block truncate font-semibold">
-                        {o.rule.title || "Tự học"}
-                        {o.status === "rescheduled" && " (dời)"}
+                        {o.rule.title || 'Tự học'}
+                        {o.status === 'rescheduled' && ' (dời)'}
                       </span>
                       <span className="block truncate opacity-90">
                         {o.start}-{o.end}
                       </span>
                       {o.rule.location && (
-                        <span className="block truncate opacity-80">
-                          {o.rule.location}
-                        </span>
+                        <span className="block truncate opacity-80">{o.rule.location}</span>
                       )}
                     </>
                   )}
