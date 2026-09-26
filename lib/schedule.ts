@@ -146,7 +146,7 @@ export function describeRange(rule: ScheduleRule) {
 }
 
 /** Các ngày gốc của quy tắc nằm trong [from, to] (tính cả hai đầu). */
-function ruleDates(rule: ScheduleRule, from: string, to: string) {
+export function ruleDates(rule: ScheduleRule, from: string, to: string) {
   const out: string[] = [];
   // buổi đơn lẻ: chỉ cần ngày nằm trong khoảng, không phụ thuộc weekdays
   if (rule.starts_on === rule.ends_on) {

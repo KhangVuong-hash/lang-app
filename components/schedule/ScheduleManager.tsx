@@ -24,6 +24,7 @@ import {
   minutesBetween,
   mondayOf,
   nowLocalTime,
+  ruleDates,
   todayLocal,
   weekdayOf,
   type Occurrence,
@@ -37,10 +38,16 @@ type RuleDialogState = {
   time?: string;
 } | null;
 
-/** màu cố định theo id lịch (không đổi khi sửa ngày/giờ) */
-function colorOf(id: string) {
+/** tạo một lần tối đa bấy nhiêu buổi khi chọn "lặp hằng tuần" */
+const MAX_REPEAT_SESSIONS = 200;
+
+/**
+ * Màu theo tiêu đề (các buổi tạo cùng lúc bằng "lặp hằng tuần" cùng màu),
+ * không có tiêu đề thì theo id. Không đổi khi sửa ngày/giờ.
+ */
+function colorKey(key: string) {
   let h = 0;
-  for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  for (const c of key) h = (h * 31 + c.charCodeAt(0)) >>> 0;
   return RULE_COLORS[h % RULE_COLORS.length];
 }
 
@@ -180,6 +187,8 @@ export default function ScheduleManager({
   }
 
   const focused = rules.find((r) => r.id === focusId) ?? null;
+  const titleById = useMemo(() => new Map(rules.map((r) => [r.id, r.title])), [rules]);
+  const colorOf = (id: string) => colorKey(titleById.get(id)?.trim() || id);
 
   const toolbar = (
     <>
@@ -345,7 +354,7 @@ export default function ScheduleManager({
         {moveError && <p className="mt-2 text-sm text-danger">{moveError}</p>}
         <p className="mt-3 text-xs text-ink-faint">
           {view === 'month'
-            ? 'Bấm vào một ngày để xem theo giờ. Bấm vào một buổi để huỷ/dời hoặc sửa cả lịch; có thể kéo thả buổi học sang ngày khác.'
+            ? 'Bấm vào một ngày để xem theo giờ. Bấm vào một buổi để huỷ/dời hoặc sửa buổi đó; có thể kéo thả buổi học sang ngày khác.'
             : 'Bấm vào ô giờ trống để thêm buổi học bắt đầu từ giờ đó. Các buổi trùng giờ hiển thị cạnh nhau.'}
         </p>
       </section>
@@ -353,7 +362,11 @@ export default function ScheduleManager({
       <Dialog open={!!ruleDialog} onOpenChange={(o) => !o && setRuleDialog(null)}>
         <DialogContent className="max-w-lg">
           <DialogTitle className="mb-4 pr-8 font-display text-lg font-semibold text-ink">
-            {ruleDialog?.rule ? 'Sửa lịch học' : 'Thêm lịch học'}
+            {!ruleDialog?.rule
+              ? 'Thêm lịch học'
+              : ruleDialog.rule.ends_on === ruleDialog.rule.starts_on
+                ? 'Sửa buổi học'
+                : 'Sửa lịch học'}
           </DialogTitle>
           {ruleDialog && (
             <RuleForm
@@ -415,7 +428,9 @@ function RuleForm({
 }) {
   const supabase = createClient();
   const today = defaultDate ?? todayLocal();
-  const [once, setOnce] = useState(rule ? rule.ends_on === rule.starts_on : true);
+  // lịch lặp kiểu cũ (một quy tắc chung) vẫn sửa được như trước
+  const legacyRepeat = !!rule && rule.ends_on !== rule.starts_on;
+  const [once, setOnce] = useState(!legacyRepeat);
   const [title, setTitle] = useState(rule?.title ?? '');
   const [weekdays, setWeekdays] = useState<number[]>(rule?.weekdays ?? [weekdayOf(today)]);
   const [start, setStart] = useState(rule ? hhmm(rule.start_time) : (defaultTime ?? '19:00'));
@@ -441,6 +456,27 @@ function RuleForm({
     setWeekdays((w) => (w.includes(d) ? w.filter((x) => x !== d) : [...w, d]));
   }
 
+  const splitRepeat = !rule && !once;
+  const repeatCount = useMemo(() => {
+    if (!splitRepeat || !endsOn || endsOn < startsOn || weekdays.length === 0) return null;
+    return ruleDates(
+      {
+        id: '',
+        title: null,
+        weekdays,
+        start_time: start,
+        end_time: end,
+        starts_on: startsOn,
+        ends_on: endsOn,
+        interval_weeks: Number(intervalWeeks),
+        location: null,
+        note: null,
+      },
+      startsOn,
+      endsOn
+    ).length;
+  }, [splitRepeat, endsOn, startsOn, weekdays, start, end, intervalWeeks]);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -448,6 +484,49 @@ function RuleForm({
     if (!once && weekdays.length === 0) return setError('Chọn ít nhất một ngày trong tuần.');
     if (!once && endsOn && endsOn < startsOn)
       return setError('Ngày kết thúc phải sau ngày bắt đầu.');
+    if (splitRepeat && !endsOn) return setError('Chọn ngày kết thúc cho lịch lặp.');
+
+    const base = {
+      title: title.trim() || null,
+      start_time: start,
+      end_time: end,
+      interval_weeks: 1,
+      location: location.trim() || null,
+      note: note.trim() || null,
+    };
+
+    // lặp hằng tuần = tạo sẵn từng buổi đơn lẻ, độc lập với nhau (sửa/xoá riêng từng buổi)
+    if (splitRepeat) {
+      const dates = ruleDates(
+        {
+          ...base,
+          id: '',
+          weekdays,
+          starts_on: startsOn,
+          ends_on: endsOn,
+          interval_weeks: Number(intervalWeeks),
+        },
+        startsOn,
+        endsOn
+      );
+      if (dates.length === 0) return setError('Không có buổi nào trong khoảng ngày đã chọn.');
+      if (dates.length > MAX_REPEAT_SESSIONS)
+        return setError(
+          `Tối đa ${MAX_REPEAT_SESSIONS} buổi mỗi lần (đang là ${dates.length}), hãy rút ngắn khoảng ngày.`
+        );
+      setSaving(true);
+      const { error } = await supabase.from('study_schedules').insert(
+        dates.map((d) => ({
+          ...base,
+          weekdays: [weekdayOf(d)],
+          starts_on: d,
+          ends_on: d,
+        }))
+      );
+      setSaving(false);
+      if (error) return setError(error.message);
+      return onDone();
+    }
 
     const payload = {
       title: title.trim() || null,
@@ -472,23 +551,25 @@ function RuleForm({
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <div className="inline-flex rounded-lg border border-line p-0.5">
-        {[
-          { v: true, label: 'Một buổi' },
-          { v: false, label: 'Lặp hằng tuần' },
-        ].map((o) => (
-          <button
-            key={o.label}
-            type="button"
-            onClick={() => setOnce(o.v)}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-              once === o.v ? 'bg-brand text-white' : 'text-ink-soft hover:text-ink'
-            }`}
-          >
-            {o.label}
-          </button>
-        ))}
-      </div>
+      {!rule && (
+        <div className="inline-flex rounded-lg border border-line p-0.5">
+          {[
+            { v: true, label: 'Một buổi' },
+            { v: false, label: 'Lặp hằng tuần' },
+          ].map((o) => (
+            <button
+              key={o.label}
+              type="button"
+              onClick={() => setOnce(o.v)}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+                once === o.v ? 'bg-brand text-white' : 'text-ink-soft hover:text-ink'
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div>
         <label className="field-label">Tiêu đề (tuỳ chọn)</label>
@@ -550,9 +631,10 @@ function RuleForm({
         </div>
         {!once && (
           <div>
-            <label className="field-label">Đến ngày (tuỳ chọn)</label>
+            <label className="field-label">{rule ? 'Đến ngày (tuỳ chọn)' : 'Đến ngày'}</label>
             <input
               type="date"
+              required={!rule}
               value={endsOn}
               min={startsOn}
               onChange={(e) => setEndsOn(e.target.value)}
@@ -598,12 +680,25 @@ function RuleForm({
         />
       </div>
 
+      {splitRepeat && (
+        <p className="text-xs text-ink-faint">
+          {repeatCount != null ? `Sẽ tạo ${repeatCount} buổi riêng lẻ. ` : ''}
+          Mỗi buổi là một lịch độc lập: sửa hay xoá buổi nào chỉ ảnh hưởng buổi đó.
+        </p>
+      )}
+
       {error && <p className="text-sm text-danger">{error}</p>}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <button disabled={saving} className="btn-primary">
           {saving && <Spinner />}
-          {saving ? 'Đang lưu…' : rule ? 'Lưu thay đổi' : 'Thêm lịch'}
+          {saving
+            ? 'Đang lưu…'
+            : rule
+              ? 'Lưu thay đổi'
+              : repeatCount
+                ? `Thêm ${repeatCount} buổi`
+                : 'Thêm lịch'}
         </button>
         {rule && (
           <ConfirmButton
@@ -611,10 +706,10 @@ function RuleForm({
               const msg = await onDelete(rule.id);
               if (msg) setError(msg);
             }}
-            question="Xoá lịch này và mọi buổi của nó?"
+            question={legacyRepeat ? 'Xoá lịch này và mọi buổi của nó?' : 'Xoá buổi học này?'}
             confirmLabel="Xoá"
           >
-            Xoá lịch
+            {legacyRepeat ? 'Xoá lịch' : 'Xoá buổi'}
           </ConfirmButton>
         )}
       </div>
@@ -687,7 +782,9 @@ function OccurrenceForm({
           className="inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline"
         >
           <Pencil className="h-3.5 w-3.5" />
-          Sửa / xoá cả lịch
+          {occurrence.rule.ends_on === occurrence.rule.starts_on
+            ? 'Sửa / xoá buổi này'
+            : 'Sửa / xoá cả lịch'}
         </button>
       </div>
 
