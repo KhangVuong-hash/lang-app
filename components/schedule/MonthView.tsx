@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, type ReactNode } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, SquareArrowOutUpRight } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import {
   WEEKDAY_SHORT,
@@ -53,6 +53,7 @@ export default function MonthView({
   colorOf: (ruleId: string) => string;
   focusId: string | null;
   onSelect: (o: Occurrence) => void;
+  /** bấm vào ô ngày (mở lịch theo giờ của ngày đó) */
   onDayClick: (date: string) => void;
   /** kéo-thả một buổi sang ngày khác */
   onMove: (o: Occurrence, date: string) => void;
@@ -206,8 +207,8 @@ export default function MonthView({
                     onDayClick(date);
                   }
                 }}
-                aria-label={`Thêm buổi học ngày ${formatDate(date)}`}
-                className={`min-h-[4.5rem] cursor-pointer border-b border-r border-line p-1 hover:bg-paper sm:min-h-[6.5rem] ${
+                aria-label={`Xem theo giờ ngày ${formatDate(date)}`}
+                className={`group relative min-h-[4.5rem] cursor-pointer border-b border-r border-line p-1 hover:bg-paper sm:min-h-[6.5rem] ${
                   i % 7 === 6 ? 'border-r-0' : ''
                 } ${i >= 35 ? 'border-b-0' : ''} ${
                   dropDate === date
@@ -217,6 +218,22 @@ export default function MonthView({
                       : 'bg-paper/60'
                 }`}
               >
+                {/* ngày có buổi học: nút mở nhanh lịch theo giờ ở góc trên phải */}
+                {items.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDayClick(date);
+                    }}
+                    title="Xem theo giờ"
+                    aria-label={`Xem theo giờ ngày ${formatDate(date)}`}
+                    className="absolute right-1 top-1 hidden h-6 w-6 place-items-center rounded text-ink-faint hover:bg-black/10 hover:text-brand group-hover:text-ink-soft sm:grid"
+                  >
+                    <SquareArrowOutUpRight className="h-3.5 w-3.5" />
+                  </button>
+                )}
+
                 <div className="mb-1 flex justify-center">
                   <span
                     className={`grid h-6 min-w-[1.5rem] place-items-center rounded-full px-1 text-xs ${
@@ -293,7 +310,7 @@ export default function MonthView({
             }}
             className="btn-secondary btn-sm mt-4"
           >
-            Thêm buổi vào ngày này
+            Xem theo giờ
           </button>
         </DialogContent>
       </Dialog>

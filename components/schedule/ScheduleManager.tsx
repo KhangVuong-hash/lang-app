@@ -10,6 +10,7 @@ import Spinner from '@/components/ui/Spinner';
 import TimePicker from '@/components/ui/TimePicker';
 import ConfirmButton from '@/components/ui/ConfirmButton';
 import MonthView, { RULE_COLORS } from '@/components/schedule/MonthView';
+import DayView from '@/components/schedule/DayView';
 import {
   WEEKDAY_SHORT,
   WEEK_ORDER,
@@ -30,7 +31,11 @@ import {
   type ScheduleRule,
 } from '@/lib/schedule';
 
-type RuleDialogState = { rule?: ScheduleRule; date?: string } | null;
+type RuleDialogState = {
+  rule?: ScheduleRule;
+  date?: string;
+  time?: string;
+} | null;
 
 /** màu cố định theo id lịch (không đổi khi sửa ngày/giờ) */
 function colorOf(id: string) {
@@ -60,7 +65,9 @@ export default function ScheduleManager({
   const [moveError, setMoveError] = useState<string | null>(null);
   const [ruleDialog, setRuleDialog] = useState<RuleDialogState>(null);
   const [occurrence, setOccurrence] = useState<Occurrence | null>(null);
+  const [view, setView] = useState<'month' | 'day'>('month');
   const [month, setMonth] = useState(() => todayLocal().slice(0, 7));
+  const [day, setDay] = useState(() => todayLocal());
   const [focusId, setFocusId] = useState<string | null>(null);
 
   // giờ hiện tại chỉ tính ở client (tránh lệch khi hydrate), cập nhật mỗi phút
@@ -103,7 +110,10 @@ export default function ScheduleManager({
     if (!now) return null;
     if (now.time >= o.end) return { label: 'Đã xong', cls: 'bg-success/10 text-success' };
     if (now.time >= o.start) return { label: 'Đang học', cls: 'bg-highlight-soft text-ink' };
-    return { label: 'Sắp tới', cls: 'bg-skill-listening/10 text-skill-listening' };
+    return {
+      label: 'Sắp tới',
+      cls: 'bg-skill-listening/10 text-skill-listening',
+    };
   };
 
   /**
@@ -117,7 +127,11 @@ export default function ScheduleManager({
     let error: { message: string } | null = null;
 
     if (!ex && o.rule.starts_on === o.rule.ends_on) {
-      const patch = { starts_on: date, ends_on: date, weekdays: [weekdayOf(date)] };
+      const patch = {
+        starts_on: date,
+        ends_on: date,
+        weekdays: [weekdayOf(date)],
+      };
       setRules((rs) => rs.map((r) => (r.id === o.rule.id ? { ...r, ...patch } : r)));
       ({ error } = await supabase.from('study_schedules').update(patch).eq('id', o.rule.id));
     } else if (ex && date === o.originalDate) {
@@ -167,6 +181,40 @@ export default function ScheduleManager({
 
   const focused = rules.find((r) => r.id === focusId) ?? null;
 
+  const toolbar = (
+    <>
+      {focused && (
+        <button onClick={() => setFocusId(null)} className="btn-ghost btn-sm">
+          Bỏ chọn “{focused.title || 'Tự học'}”
+        </button>
+      )}
+      <div className="inline-flex rounded-lg border border-line p-0.5">
+        {(
+          [
+            { v: 'month', label: 'Tháng' },
+            { v: 'day', label: 'Ngày' },
+          ] as const
+        ).map((o) => (
+          <button
+            key={o.v}
+            type="button"
+            onClick={() => setView(o.v)}
+            aria-pressed={view === o.v}
+            className={`rounded-md px-2.5 py-1 text-sm font-medium ${
+              view === o.v ? 'bg-brand text-white' : 'text-ink-soft hover:text-ink'
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+      <button onClick={() => setRuleDialog({})} className="btn-primary btn-sm">
+        <CalendarPlus className="h-4 w-4" />
+        Thêm lịch
+      </button>
+    </>
+  );
+
   return (
     <div className="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
       <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
@@ -195,6 +243,7 @@ export default function ScheduleManager({
                       onClick={() => {
                         setFocusId(o.rule.id);
                         setMonth(today.slice(0, 7));
+                        setDay(today);
                       }}
                       className={`flex w-full items-start gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-paper ${
                         o.rule.id === focusId ? 'bg-brand/10' : ''
@@ -244,6 +293,7 @@ export default function ScheduleManager({
             onClick={() => {
               setFocusId(stats.upcoming!.rule.id);
               setMonth(stats.upcoming!.date.slice(0, 7));
+              setDay(stats.upcoming!.date);
             }}
             className="card block w-full p-4 text-left hover:bg-paper"
           >
@@ -259,34 +309,44 @@ export default function ScheduleManager({
       </aside>
 
       <section className="card min-w-0 p-4">
-        <MonthView
-          month={month}
-          onMonthChange={setMonth}
-          rules={rules}
-          exceptions={exceptions}
-          colorOf={colorOf}
-          focusId={focusId}
-          onSelect={setOccurrence}
-          onDayClick={(date) => setRuleDialog({ date })}
-          onMove={moveOccurrence}
-          toolbar={
-            <>
-              {focused && (
-                <button onClick={() => setFocusId(null)} className="btn-ghost btn-sm">
-                  Bỏ chọn “{focused.title || 'Tự học'}”
-                </button>
-              )}
-              <button onClick={() => setRuleDialog({})} className="btn-primary btn-sm">
-                <CalendarPlus className="h-4 w-4" />
-                Thêm lịch
-              </button>
-            </>
-          }
-        />
+        {view === 'month' ? (
+          <MonthView
+            month={month}
+            onMonthChange={setMonth}
+            rules={rules}
+            exceptions={exceptions}
+            colorOf={colorOf}
+            focusId={focusId}
+            onSelect={setOccurrence}
+            onDayClick={(date) => {
+              setDay(date);
+              setView('day');
+            }}
+            onMove={moveOccurrence}
+            toolbar={toolbar}
+          />
+        ) : (
+          <DayView
+            date={day}
+            onDateChange={(date) => {
+              setDay(date);
+              setMonth(date.slice(0, 7));
+            }}
+            rules={rules}
+            exceptions={exceptions}
+            colorOf={colorOf}
+            focusId={focusId}
+            now={now}
+            onSelect={setOccurrence}
+            onSlotClick={(date, time) => setRuleDialog({ date, time })}
+            toolbar={toolbar}
+          />
+        )}
         {moveError && <p className="mt-2 text-sm text-danger">{moveError}</p>}
         <p className="mt-3 text-xs text-ink-faint">
-          Bấm vào một ngày để thêm buổi học. Bấm vào một buổi để huỷ/dời hoặc sửa cả lịch; có thể
-          kéo thả buổi học sang ngày khác.
+          {view === 'month'
+            ? 'Bấm vào một ngày để xem theo giờ. Bấm vào một buổi để huỷ/dời hoặc sửa cả lịch; có thể kéo thả buổi học sang ngày khác.'
+            : 'Bấm vào ô giờ trống để thêm buổi học bắt đầu từ giờ đó. Các buổi trùng giờ hiển thị cạnh nhau.'}
         </p>
       </section>
 
@@ -300,6 +360,7 @@ export default function ScheduleManager({
               key={ruleDialog.rule?.id ?? 'new'}
               rule={ruleDialog.rule}
               defaultDate={ruleDialog.date}
+              defaultTime={ruleDialog.time}
               onDelete={removeRule}
               onDone={() => {
                 setRuleDialog(null);
@@ -339,12 +400,15 @@ export default function ScheduleManager({
 function RuleForm({
   rule,
   defaultDate,
+  defaultTime,
   onDelete,
   onDone,
 }: {
   rule?: ScheduleRule;
   /** ngày được bấm trên lịch tháng (khi thêm mới) */
   defaultDate?: string;
+  /** giờ bắt đầu được bấm trên lịch ngày (khi thêm mới), dạng 'HH:MM' */
+  defaultTime?: string;
   /** trả về thông báo lỗi nếu xoá thất bại */
   onDelete: (id: string) => Promise<string | undefined>;
   onDone: () => void;
@@ -354,8 +418,17 @@ function RuleForm({
   const [once, setOnce] = useState(rule ? rule.ends_on === rule.starts_on : true);
   const [title, setTitle] = useState(rule?.title ?? '');
   const [weekdays, setWeekdays] = useState<number[]>(rule?.weekdays ?? [weekdayOf(today)]);
-  const [start, setStart] = useState(rule ? hhmm(rule.start_time) : '19:00');
-  const [end, setEnd] = useState(rule ? hhmm(rule.end_time) : '20:30');
+  const [start, setStart] = useState(rule ? hhmm(rule.start_time) : (defaultTime ?? '19:00'));
+  const [end, setEnd] = useState(() => {
+    if (rule) return hhmm(rule.end_time);
+    if (!defaultTime) return '20:30';
+    // mặc định 1 giờ, không vượt quá 23:59
+    const min = Math.min(
+      Number(defaultTime.slice(0, 2)) * 60 + Number(defaultTime.slice(3, 5)) + 60,
+      23 * 60 + 59
+    );
+    return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+  });
   const [startsOn, setStartsOn] = useState(rule?.starts_on ?? today);
   const [endsOn, setEndsOn] = useState(rule && !once ? (rule.ends_on ?? '') : '');
   const [intervalWeeks, setIntervalWeeks] = useState(String(rule?.interval_weeks ?? 1));
