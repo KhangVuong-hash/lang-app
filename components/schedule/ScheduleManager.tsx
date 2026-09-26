@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CalendarPlus, Pencil } from 'lucide-react';
+import { CalendarPlus, Copy, Pencil } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import SimpleSelect from '@/components/ui/SimpleSelect';
@@ -34,6 +34,8 @@ import {
 
 type RuleDialogState = {
   rule?: ScheduleRule;
+  /** nhân bản: thêm mới, điền sẵn tiêu đề/giờ/địa điểm/ghi chú từ buổi này */
+  copyFrom?: ScheduleRule;
   date?: string;
   time?: string;
 } | null;
@@ -363,7 +365,9 @@ export default function ScheduleManager({
         <DialogContent className="max-w-lg">
           <DialogTitle className="mb-4 pr-8 font-display text-lg font-semibold text-ink">
             {!ruleDialog?.rule
-              ? 'Thêm lịch học'
+              ? ruleDialog?.copyFrom
+                ? 'Nhân bản buổi học'
+                : 'Thêm lịch học'
               : ruleDialog.rule.ends_on === ruleDialog.rule.starts_on
                 ? 'Sửa buổi học'
                 : 'Sửa lịch học'}
@@ -372,6 +376,7 @@ export default function ScheduleManager({
             <RuleForm
               key={ruleDialog.rule?.id ?? 'new'}
               rule={ruleDialog.rule}
+              copyFrom={ruleDialog.copyFrom}
               defaultDate={ruleDialog.date}
               defaultTime={ruleDialog.time}
               onDelete={removeRule}
@@ -398,6 +403,16 @@ export default function ScheduleManager({
                 setOccurrence(null);
                 setRuleDialog({ rule });
               }}
+              onDuplicate={() => {
+                // lấy giờ thực tế của buổi (kể cả khi đã dời)
+                const copyFrom = {
+                  ...occurrence.rule,
+                  start_time: occurrence.start,
+                  end_time: occurrence.end,
+                };
+                setOccurrence(null);
+                setRuleDialog({ copyFrom, date: occurrence.date });
+              }}
               onDone={() => {
                 setOccurrence(null);
                 router.refresh();
@@ -412,12 +427,15 @@ export default function ScheduleManager({
 
 function RuleForm({
   rule,
+  copyFrom,
   defaultDate,
   defaultTime,
   onDelete,
   onDone,
 }: {
   rule?: ScheduleRule;
+  /** buổi được nhân bản (khi thêm mới) */
+  copyFrom?: ScheduleRule;
   /** ngày được bấm trên lịch tháng (khi thêm mới) */
   defaultDate?: string;
   /** giờ bắt đầu được bấm trên lịch ngày (khi thêm mới), dạng 'HH:MM' */
@@ -431,11 +449,13 @@ function RuleForm({
   // lịch lặp kiểu cũ (một quy tắc chung) vẫn sửa được như trước
   const legacyRepeat = !!rule && rule.ends_on !== rule.starts_on;
   const [once, setOnce] = useState(!legacyRepeat);
-  const [title, setTitle] = useState(rule?.title ?? '');
+  // nguồn điền sẵn các trường nội dung: lịch đang sửa hoặc buổi được nhân bản
+  const src = rule ?? copyFrom;
+  const [title, setTitle] = useState(src?.title ?? '');
   const [weekdays, setWeekdays] = useState<number[]>(rule?.weekdays ?? [weekdayOf(today)]);
-  const [start, setStart] = useState(rule ? hhmm(rule.start_time) : (defaultTime ?? '19:00'));
+  const [start, setStart] = useState(src ? hhmm(src.start_time) : (defaultTime ?? '19:00'));
   const [end, setEnd] = useState(() => {
-    if (rule) return hhmm(rule.end_time);
+    if (src) return hhmm(src.end_time);
     if (!defaultTime) return '20:30';
     // mặc định 1 giờ, không vượt quá 23:59
     const min = Math.min(
@@ -447,8 +467,8 @@ function RuleForm({
   const [startsOn, setStartsOn] = useState(rule?.starts_on ?? today);
   const [endsOn, setEndsOn] = useState(rule && !once ? (rule.ends_on ?? '') : '');
   const [intervalWeeks, setIntervalWeeks] = useState(String(rule?.interval_weeks ?? 1));
-  const [location, setLocation] = useState(rule?.location ?? '');
-  const [note, setNote] = useState(rule?.note ?? '');
+  const [location, setLocation] = useState(src?.location ?? '');
+  const [note, setNote] = useState(src?.note ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -720,10 +740,12 @@ function RuleForm({
 function OccurrenceForm({
   occurrence,
   onEditRule,
+  onDuplicate,
   onDone,
 }: {
   occurrence: Occurrence;
   onEditRule: () => void;
+  onDuplicate: () => void;
   onDone: () => void;
 }) {
   const supabase = createClient();
@@ -776,16 +798,26 @@ function OccurrenceForm({
           </p>
           <p className="text-xs text-ink-faint">{describeRange(occurrence.rule)}</p>
         </div>
-        <button
-          type="button"
-          onClick={onEditRule}
-          className="inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-          {occurrence.rule.ends_on === occurrence.rule.starts_on
-            ? 'Sửa / xoá buổi này'
-            : 'Sửa / xoá cả lịch'}
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={onEditRule}
+            className="inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            {occurrence.rule.ends_on === occurrence.rule.starts_on
+              ? 'Sửa / xoá buổi này'
+              : 'Sửa / xoá cả lịch'}
+          </button>
+          <button
+            type="button"
+            onClick={onDuplicate}
+            className="inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline"
+          >
+            <Copy className="h-3.5 w-3.5" />
+            Nhân bản
+          </button>
+        </div>
       </div>
 
       {ex && (
