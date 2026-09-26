@@ -30,8 +30,11 @@ writing_topics (class_id, teacher_id, topic_type: essay|translation, prompt, sou
 
 vocabulary_notes (+ part_of_speech?) / grammar_notes (user_id → profiles, class_id?, language_code?, synonyms?)  - sổ tay riêng
 
-study_schedules (owner_id → profiles, weekdays smallint[], start/end_time, starts_on, ends_on?, interval_weeks)  - thời khóa biểu tự học
-  └─ study_schedule_exceptions (schedule_id, owner_id, occurs_on, status: cancelled|rescheduled, new_date/start/end?)
+study_categories (owner_id → profiles, name, color 0-7)  - danh mục học do user tự tạo
+study_schedules (owner_id → profiles, category_id? → study_categories, weekdays smallint[], start/end_time, starts_on, ends_on?, interval_weeks)  - thời khóa biểu tự học
+  ├─ study_schedule_exceptions (schedule_id, owner_id, occurs_on, status: cancelled|rescheduled, new_date/start/end?)
+  │    UNIQUE(schedule_id, occurs_on)
+  └─ study_session_logs (schedule_id, owner_id, occurs_on, completed, actual_minutes?)  - kết quả từng buổi, dùng cho /profile/stats
        UNIQUE(schedule_id, occurs_on)
 
 personal_notes (owner_id → profiles, title?, content? (HTML), image_paths text[] ≤ 20, pinned)  - ghi chú cá nhân

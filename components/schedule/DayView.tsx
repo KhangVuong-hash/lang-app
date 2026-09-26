@@ -12,7 +12,9 @@ import {
   type Occurrence,
   type ScheduleException,
   type ScheduleRule,
+  type SessionLog,
 } from '@/lib/schedule';
+import { logMark } from '@/components/schedule/MonthView';
 
 /** chiều cao một giờ trên lưới (px) */
 const HOUR_PX = 56;
@@ -68,6 +70,7 @@ export default function DayView({
   rules,
   exceptions,
   colorOf,
+  logByKey,
   focusId,
   now,
   onSelect,
@@ -79,6 +82,8 @@ export default function DayView({
   rules: ScheduleRule[];
   exceptions: ScheduleException[];
   colorOf: (ruleId: string) => string;
+  /** kết quả từng buổi (theo Occurrence.key) để hiện dấu ✓ / ✗ */
+  logByKey: Map<string, SessionLog>;
   focusId: string | null;
   /** giờ hiện tại (chỉ có ở client) để vẽ vạch "bây giờ" */
   now: { date: string; time: string } | null;
@@ -221,12 +226,14 @@ export default function DayView({
                 >
                   {short ? (
                     <span className="block truncate">
+                      {logMark(logByKey.get(o.key))}
                       <span className="font-semibold">{o.rule.title || 'Tự học'}</span> {o.start}-
                       {o.end}
                     </span>
                   ) : (
                     <>
                       <span className="block truncate font-semibold">
+                        {logMark(logByKey.get(o.key))}
                         {o.rule.title || 'Tự học'}
                         {o.status === 'rescheduled' && ' (dời)'}
                       </span>
