@@ -224,8 +224,8 @@ export default function MonthView({
                       isToday
                         ? 'bg-brand font-semibold text-white'
                         : inMonth
-                          ? 'text-ink hover:bg-black/10'
-                          : 'text-ink-faint hover:bg-black/10'
+                          ? 'text-ink'
+                          : 'text-ink-faint'
                     }`}
                   >
                     {date.endsWith('-01')
