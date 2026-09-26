@@ -356,8 +356,7 @@ export default function ScheduleManager({
             colorOf={colorOf}
             focusId={focusId}
             onSelect={setOccurrence}
-            onDayClick={(date) => setRuleDialog({ date })}
-            onDayOpen={(date) => {
+            onDayClick={(date) => {
               setDay(date);
               setView("day");
             }}
@@ -384,7 +383,7 @@ export default function ScheduleManager({
         {moveError && <p className="mt-2 text-sm text-danger">{moveError}</p>}
         <p className="mt-3 text-xs text-ink-faint">
           {view === "month"
-            ? "Bấm vào một ngày để thêm buổi học, bấm số ngày để xem theo giờ. Bấm vào một buổi để huỷ/dời hoặc sửa cả lịch; có thể kéo thả buổi học sang ngày khác."
+            ? "Bấm vào một ngày để xem theo giờ. Bấm vào một buổi để huỷ/dời hoặc sửa cả lịch; có thể kéo thả buổi học sang ngày khác."
             : "Bấm vào ô giờ trống để thêm buổi học bắt đầu từ giờ đó. Các buổi trùng giờ hiển thị cạnh nhau."}
         </p>
       </section>

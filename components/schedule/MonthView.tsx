@@ -43,7 +43,6 @@ export default function MonthView({
   focusId,
   onSelect,
   onDayClick,
-  onDayOpen,
   onMove,
   toolbar,
 }: {
@@ -54,9 +53,8 @@ export default function MonthView({
   colorOf: (ruleId: string) => string;
   focusId: string | null;
   onSelect: (o: Occurrence) => void;
+  /** bấm vào ô ngày (mở lịch theo giờ của ngày đó) */
   onDayClick: (date: string) => void;
-  /** bấm vào số ngày để mở lịch theo giờ */
-  onDayOpen?: (date: string) => void;
   /** kéo-thả một buổi sang ngày khác */
   onMove: (o: Occurrence, date: string) => void;
   /** nút thao tác hiển thị cạnh tiêu đề tháng */
@@ -217,7 +215,7 @@ export default function MonthView({
                     onDayClick(date);
                   }
                 }}
-                aria-label={`Thêm buổi học ngày ${formatDate(date)}`}
+                aria-label={`Xem theo giờ ngày ${formatDate(date)}`}
                 className={`min-h-[4.5rem] cursor-pointer border-b border-r border-line p-1 hover:bg-paper sm:min-h-[6.5rem] ${
                   i % 7 === 6 ? "border-r-0" : ""
                 } ${i >= 35 ? "border-b-0" : ""} ${
@@ -229,14 +227,7 @@ export default function MonthView({
                 }`}
               >
                 <div className="mb-1 flex justify-center">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      if (!onDayOpen) return;
-                      e.stopPropagation();
-                      onDayOpen(date);
-                    }}
-                    aria-label={`Xem theo giờ ngày ${formatDate(date)}`}
+                  <span
                     className={`grid h-6 min-w-[1.5rem] place-items-center rounded-full px-1 text-xs ${
                       isToday
                         ? "bg-brand font-semibold text-white"
@@ -248,7 +239,7 @@ export default function MonthView({
                     {date.endsWith("-01")
                       ? `${Number(date.slice(8))}/${Number(date.slice(5, 7))}`
                       : Number(date.slice(8))}
-                  </button>
+                  </span>
                 </div>
 
                 {/* màn nhỏ: chỉ hiện chấm màu, bấm "+" để xem */}
@@ -313,7 +304,7 @@ export default function MonthView({
             }}
             className="btn-secondary btn-sm mt-4"
           >
-            Thêm buổi vào ngày này
+            Xem theo giờ
           </button>
         </DialogContent>
       </Dialog>
