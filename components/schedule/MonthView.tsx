@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useMemo, useState, type ReactNode } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { useMemo, useState, type ReactNode } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
   WEEKDAY_SHORT,
   WEEK_ORDER,
@@ -14,19 +14,19 @@ import {
   type Occurrence,
   type ScheduleException,
   type ScheduleRule,
-} from '@/lib/schedule';
+} from "@/lib/schedule";
 
 /** số buổi hiện trong một ô ngày trước khi gộp thành "+N" */
 const MAX_PER_DAY = 3;
 
 /** màu cho từng lịch, xoay vòng theo thứ tự */
 export const RULE_COLORS = [
-  'bg-brand text-white',
-  'bg-skill-speaking text-white',
-  'bg-skill-listening text-white',
-  'bg-skill-writing text-white',
-  'bg-skill-reading text-white',
-  'bg-highlight text-ink',
+  "bg-brand text-white",
+  "bg-skill-speaking text-white",
+  "bg-skill-listening text-white",
+  "bg-skill-writing text-white",
+  "bg-skill-reading text-white",
+  "bg-highlight text-ink",
 ];
 
 /**
@@ -43,6 +43,7 @@ export default function MonthView({
   focusId,
   onSelect,
   onDayClick,
+  onDayOpen,
   onMove,
   toolbar,
 }: {
@@ -54,6 +55,8 @@ export default function MonthView({
   focusId: string | null;
   onSelect: (o: Occurrence) => void;
   onDayClick: (date: string) => void;
+  /** bấm vào số ngày để mở lịch theo giờ */
+  onDayOpen?: (date: string) => void;
   /** kéo-thả một buổi sang ngày khác */
   onMove: (o: Occurrence, date: string) => void;
   /** nút thao tác hiển thị cạnh tiêu đề tháng */
@@ -78,12 +81,15 @@ export default function MonthView({
     // lịch đang chọn lên đầu ô để không bị gộp vào "+N"
     if (focusId) {
       for (const list of map.values())
-        list.sort((a, b) => Number(b.rule.id === focusId) - Number(a.rule.id === focusId));
+        list.sort(
+          (a, b) =>
+            Number(b.rule.id === focusId) - Number(a.rule.id === focusId),
+        );
     }
     return map;
   }, [rules, exceptions, gridStart, gridEnd, focusId]);
 
-  const [y, m] = month.split('-').map(Number);
+  const [y, m] = month.split("-").map(Number);
   const shift = (n: number) => {
     const d = new Date(Date.UTC(y, m - 1 + n, 1));
     onMonthChange(d.toISOString().slice(0, 7));
@@ -91,7 +97,7 @@ export default function MonthView({
 
   const chip = (o: Occurrence, compact: boolean) => {
     const dim = focusId && o.rule.id !== focusId;
-    const cancelled = o.status === 'cancelled';
+    const cancelled = o.status === "cancelled";
     return (
       <button
         key={o.key}
@@ -99,8 +105,8 @@ export default function MonthView({
         // chỉ kéo được trong lưới tháng (không phải trong hộp "+N buổi")
         draggable={compact}
         onDragStart={(e) => {
-          e.dataTransfer.effectAllowed = 'move';
-          e.dataTransfer.setData('text/plain', o.key);
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", o.key);
           setDragging(o);
         }}
         onDragEnd={() => {
@@ -112,17 +118,18 @@ export default function MonthView({
           setMoreDay(null);
           onSelect(o);
         }}
-        title={`${o.start}-${o.end}${o.rule.title ? ` · ${o.rule.title}` : ''}`}
+        title={`${o.start}-${o.end}${o.rule.title ? ` · ${o.rule.title}` : ""}`}
         className={`block w-full truncate rounded px-1.5 py-0.5 text-left text-xs transition-opacity ${
-          compact ? 'cursor-grab active:cursor-grabbing' : ''
-        } ${dragging?.key === o.key ? 'opacity-40' : ''} ${colorOf(
-          o.rule.id
-        )} ${dim ? 'opacity-25' : ''} ${
-          focusId && !dim ? 'ring-2 ring-ink/40 ring-offset-1' : ''
-        } ${cancelled ? 'line-through opacity-50' : ''} ${compact ? '' : 'py-1'}`}
+          compact ? "cursor-grab active:cursor-grabbing" : ""
+        } ${dragging?.key === o.key ? "opacity-40" : ""} ${colorOf(
+          o.rule.id,
+        )} ${dim ? "opacity-25" : ""} ${
+          focusId && !dim ? "ring-2 ring-ink/40 ring-offset-1" : ""
+        } ${cancelled ? "line-through opacity-50" : ""} ${compact ? "" : "py-1"}`}
       >
-        <span className="font-semibold">{o.start}</span> {o.rule.title || 'Tự học'}
-        {o.status === 'rescheduled' && ' (dời)'}
+        <span className="font-semibold">{o.start}</span>{" "}
+        {o.rule.title || "Tự học"}
+        {o.status === "rescheduled" && " (dời)"}
       </button>
     );
   };
@@ -187,11 +194,12 @@ export default function MonthView({
                 onDragOver={(e) => {
                   if (!dragging) return;
                   e.preventDefault();
-                  e.dataTransfer.dropEffect = 'move';
+                  e.dataTransfer.dropEffect = "move";
                   if (dropDate !== date) setDropDate(date);
                 }}
                 onDragLeave={(e) => {
-                  if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropDate(null);
+                  if (!e.currentTarget.contains(e.relatedTarget as Node))
+                    setDropDate(null);
                 }}
                 onDrop={(e) => {
                   e.preventDefault();
@@ -201,36 +209,46 @@ export default function MonthView({
                   if (o && o.date !== date) onMove(o, date);
                 }}
                 onKeyDown={(e) => {
-                  if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+                  if (
+                    e.target === e.currentTarget &&
+                    (e.key === "Enter" || e.key === " ")
+                  ) {
                     e.preventDefault();
                     onDayClick(date);
                   }
                 }}
                 aria-label={`Thêm buổi học ngày ${formatDate(date)}`}
                 className={`min-h-[4.5rem] cursor-pointer border-b border-r border-line p-1 hover:bg-paper sm:min-h-[6.5rem] ${
-                  i % 7 === 6 ? 'border-r-0' : ''
-                } ${i >= 35 ? 'border-b-0' : ''} ${
+                  i % 7 === 6 ? "border-r-0" : ""
+                } ${i >= 35 ? "border-b-0" : ""} ${
                   dropDate === date
-                    ? 'bg-highlight-soft/70 outline-dashed outline-2 -outline-offset-2 outline-brand'
+                    ? "bg-highlight-soft/70 outline-dashed outline-2 -outline-offset-2 outline-brand"
                     : inMonth
-                      ? 'bg-surface'
-                      : 'bg-paper/60'
+                      ? "bg-surface"
+                      : "bg-paper/60"
                 }`}
               >
                 <div className="mb-1 flex justify-center">
-                  <span
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      if (!onDayOpen) return;
+                      e.stopPropagation();
+                      onDayOpen(date);
+                    }}
+                    aria-label={`Xem theo giờ ngày ${formatDate(date)}`}
                     className={`grid h-6 min-w-[1.5rem] place-items-center rounded-full px-1 text-xs ${
                       isToday
-                        ? 'bg-brand font-semibold text-white'
+                        ? "bg-brand font-semibold text-white"
                         : inMonth
-                          ? 'text-ink'
-                          : 'text-ink-faint'
+                          ? "text-ink hover:bg-black/10"
+                          : "text-ink-faint hover:bg-black/10"
                     }`}
                   >
-                    {date.endsWith('-01')
+                    {date.endsWith("-01")
                       ? `${Number(date.slice(8))}/${Number(date.slice(5, 7))}`
                       : Number(date.slice(8))}
-                  </span>
+                  </button>
                 </div>
 
                 {/* màn nhỏ: chỉ hiện chấm màu, bấm "+" để xem */}
@@ -247,8 +265,8 @@ export default function MonthView({
                     {items.slice(0, 4).map((o) => (
                       <span
                         key={o.key}
-                        className={`h-1.5 w-1.5 rounded-full ${colorOf(o.rule.id).split(' ')[0]} ${
-                          focusId && o.rule.id !== focusId ? 'opacity-25' : ''
+                        className={`h-1.5 w-1.5 rounded-full ${colorOf(o.rule.id).split(" ")[0]} ${
+                          focusId && o.rule.id !== focusId ? "opacity-25" : ""
                         }`}
                       />
                     ))}
@@ -282,7 +300,9 @@ export default function MonthView({
             {moreDay && formatDate(moreDay)}
           </DialogTitle>
           <div className="space-y-1.5">
-            {(moreDay ? (byDate.get(moreDay) ?? []) : []).map((o) => chip(o, false))}
+            {(moreDay ? (byDate.get(moreDay) ?? []) : []).map((o) =>
+              chip(o, false),
+            )}
           </div>
           <button
             type="button"
