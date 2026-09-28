@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Check, X } from 'lucide-react';
 import { TypePill, WordExample } from '@/components/vocab/WordList';
-import { isTyping } from '@/components/vocab/Flashcards';
+import { isTyping } from '@/components/ui/FlipCards';
 import {
   applyAnswer,
   buildQuestion,
