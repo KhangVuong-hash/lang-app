@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { TypePill, WordExample } from '@/components/vocab/WordList';
-import { isTyping } from '@/components/vocab/Flashcards';
+import { isTyping } from '@/components/ui/FlipCards';
 import {
   SRS_INTERVALS,
   SRS_MAX_BOX,

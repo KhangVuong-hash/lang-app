@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { DECK_LINK } from '@/components/vocab/NotebookNav';
-import { BookMarked, Plus, SpellCheck } from 'lucide-react';
+import { BookMarked, Layers, List, Plus, SpellCheck } from 'lucide-react';
 import Spinner from '@/components/ui/Spinner';
 import ConfirmButton from '@/components/ui/ConfirmButton';
+import FlipCards from '@/components/ui/FlipCards';
 import SimpleSelect from '@/components/ui/SimpleSelect';
 import RichText from '@/components/ui/RichText';
 import RichTextEditor, { RichTextToolbar } from '@/components/ui/RichTextEditor';
@@ -203,6 +204,11 @@ export default function Notebook({
     [`grammar:${ALL}`]: { rows: initialGrammar, done: initialGrammar.length < pageSize },
   });
 
+  // chế độ xem: bảng (lazy load) hoặc thẻ lật (nạp đủ ghi chú khớp bộ lọc)
+  const [view, setView] = useState<'list' | 'cards'>('list');
+  const [cards, setCards] = useState<{ key: string; rows: any[] } | null>(null);
+  const [loadingCards, setLoadingCards] = useState(false);
+
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
   const [saving, setSaving] = useState(false);
@@ -299,6 +305,42 @@ export default function Notebook({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, filter, posFilter, items.length, done[tab]]);
 
+  const cardKey = `${tab}:${tab === 'vocab' ? `${filter}|${posFilter}` : filter}`;
+
+  // vào chế độ thẻ: nạp đủ ghi chú khớp bộ lọc (API trả tối đa 1000 dòng / lần nên
+  // nạp theo trang). Không dựa vào bảng vì bảng chỉ nạp dần khi cuộn.
+  useEffect(() => {
+    if (view !== 'cards' || cards?.key === cardKey) return;
+    let cancelled = false;
+    setLoadingCards(true);
+    (async () => {
+      const PAGE = 1000;
+      const rows: any[] = [];
+      for (let from = 0; ; from += PAGE) {
+        const { data, error } = await query(tab).range(from, from + PAGE - 1);
+        if (cancelled) return;
+        if (error) {
+          setError(error.message);
+          break;
+        }
+        rows.push(...(data ?? []));
+        if (!data || data.length < PAGE) break;
+      }
+      setCards({ key: cardKey, rows });
+      setLoadingCards(false);
+    })();
+    return () => {
+      cancelled = true;
+      setLoadingCards(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, cardKey]);
+
+  // thêm / sửa / xoá cũng cập nhật bộ thẻ đang xem
+  function patchCards(fn: (rows: any[]) => any[]) {
+    setCards((c) => (c && c.key === cardKey ? { ...c, rows: fn(c.rows) } : c));
+  }
+
   function fields(d: Draft) {
     return {
       [cfg.name]: cleanHtml(d.name),
@@ -355,7 +397,10 @@ export default function Notebook({
       return;
     }
     // chỉ hiện lên đầu danh sách nếu khớp bộ lọc hiện tại
-    if (matchesFilter(data)) setList(tab, [data, ...items]);
+    if (matchesFilter(data)) {
+      setList(tab, [data, ...items]);
+      patchCards((rows) => [data, ...rows]);
+    }
     setDialog(null);
   }
 
@@ -379,10 +424,12 @@ export default function Notebook({
       setError(error.message);
       return;
     }
-    setList(
-      tab,
-      matchesFilter(data) ? items.map((x) => (x.id === id ? data : x)) : items.filter((x) => x.id !== id)
-    );
+    const replace = (rows: any[]) =>
+      matchesFilter(data)
+        ? rows.map((x) => (x.id === id ? data : x))
+        : rows.filter((x) => x.id !== id);
+    setList(tab, replace(items));
+    patchCards(replace);
     setDialog({ mode: 'view', item: data });
   }
 
@@ -399,6 +446,7 @@ export default function Notebook({
       return;
     }
     setList(tab, items.filter((x) => x.id !== id));
+    patchCards((rows) => rows.filter((x) => x.id !== id));
     setDialog(null);
   }
 
@@ -432,7 +480,7 @@ export default function Notebook({
           </Link>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <SimpleSelect
             value={filter}
             onChange={setFilter}
@@ -456,6 +504,31 @@ export default function Notebook({
               ]}
             />
           )}
+          <div className="inline-flex rounded-lg border border-line p-0.5">
+            {(
+              [
+                { v: 'list', label: 'Danh sách', Icon: List },
+                { v: 'cards', label: 'Thẻ lật', Icon: Layers },
+              ] as const
+            ).map(({ v, label, Icon }) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => {
+                  setView(v);
+                  // mở lại chế độ thẻ thì nạp dữ liệu mới
+                  if (v === 'list') setCards(null);
+                }}
+                aria-pressed={view === v}
+                className={`inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 text-sm font-medium ${
+                  view === v ? 'bg-brand text-white' : 'text-ink-soft hover:text-ink'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </button>
+            ))}
+          </div>
           <button onClick={openCreate} className="btn-primary h-10">
             <Plus className="h-4 w-4" />
             Thêm
@@ -463,60 +536,130 @@ export default function Notebook({
         </div>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-lg border border-line bg-surface">
-        <table className="w-full table-fixed text-left text-sm">
-          <thead className="border-b border-line bg-paper text-xs text-ink-faint">
-            <tr>
-              <th className="w-[35%] px-3 py-2 font-medium">{cfg.nameCol}</th>
-              {cfg.hasPos && <th className="w-20 px-3 py-2 font-medium sm:w-28">Từ loại</th>}
-              <th className="px-3 py-2 font-medium">{cfg.descPh}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-line">
-            {items.map((it: any) => (
-              <tr
-                key={it.id}
-                tabIndex={0}
-                onClick={() => {
-                  setError(null);
-                  setDialog({ mode: 'view', item: it });
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
+      {view === 'cards' ? (
+        <div className="mt-4 rounded-lg border border-line bg-surface p-4">
+          {loadingCards || cards?.key !== cardKey ? (
+            <div className="flex h-40 items-center justify-center text-ink-faint">
+              <Spinner />
+            </div>
+          ) : (
+            <FlipCards
+              // đổi mục / bộ lọc -> bắt đầu lại bộ thẻ
+              key={cardKey}
+              items={cards.rows}
+              getKey={(it: any) => it.id}
+              emptyText={`Chưa có ${cfg.label.toLowerCase()} nào${
+                filter || (cfg.hasPos && posFilter) ? ' cho lựa chọn này' : ''
+              }.`}
+              front={(it: any) => (
+                <>
+                  <RichText
+                    html={it[cfg.name] ?? ''}
+                    className="break-words font-display text-2xl font-bold text-ink"
+                  />
+                  <PosPill value={it.part_of_speech} className="mt-3" />
+                </>
+              )}
+              back={(it: any) => (
+                <>
+                  <RichText
+                    html={it[cfg.name] ?? ''}
+                    className="break-words text-xs font-medium text-ink-faint"
+                  />
+                  <RichText
+                    html={it[cfg.desc] ?? ''}
+                    className="mt-2 break-words font-display text-xl font-semibold text-ink"
+                  />
+                  {!isEmptyHtml(it.example_sentence) && (
+                    <RichText
+                      html={it.example_sentence}
+                      className="mt-4 break-words text-sm italic text-ink-soft"
+                    />
+                  )}
+                  {!isEmptyHtml(it.synonyms) && (
+                    <div className="mt-3 text-sm text-ink-soft">
+                      <span className="text-xs text-ink-faint">Đồng nghĩa: </span>
+                      <RichText html={it.synonyms} className="inline break-words" />
+                    </div>
+                  )}
+                  {it.classes?.name && (
+                    <span className="mt-4 text-xs text-ink-faint">Lớp: {it.classes.name}</span>
+                  )}
+                </>
+              )}
+              footer={(it: any) => (
+                <button
+                  type="button"
+                  onClick={() => {
                     setError(null);
                     setDialog({ mode: 'view', item: it });
-                  }
-                }}
-                className="cursor-pointer align-top hover:bg-paper focus-visible:bg-paper"
-              >
-                <td className="px-3 py-2.5 font-semibold text-ink">
-                  <RichText html={it[cfg.name] ?? ''} className="line-clamp-2 break-words" />
-                </td>
-                {cfg.hasPos && (
-                  <td className="px-3 py-2.5">
-                    <PosPill value={it.part_of_speech} />
-                  </td>
-                )}
-                <td className="px-3 py-2.5 text-ink-soft">
-                  <RichText html={it[cfg.desc] ?? ''} className="line-clamp-2 break-words" />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {items.length === 0 && (
-          <p className="py-6 text-center text-sm text-ink-faint">
-            Chưa có {cfg.label.toLowerCase()} nào
-            {filter || (cfg.hasPos && posFilter) ? ' cho lựa chọn này' : ''}.
-          </p>
-        )}
-      </div>
-
-      {!done[tab] && items.length > 0 && (
-        <div ref={sentinelRef} className="flex h-10 items-center justify-center text-ink-faint">
-          {loadingMore && <Spinner />}
+                  }}
+                  className="text-sm font-medium text-brand hover:underline"
+                >
+                  Chi tiết / sửa
+                </button>
+              )}
+            />
+          )}
         </div>
+      ) : (
+        <>
+          <div className="mt-4 overflow-hidden rounded-lg border border-line bg-surface">
+            <table className="w-full table-fixed text-left text-sm">
+              <thead className="border-b border-line bg-paper text-xs text-ink-faint">
+                <tr>
+                  <th className="w-[35%] px-3 py-2 font-medium">{cfg.nameCol}</th>
+                  {cfg.hasPos && <th className="w-20 px-3 py-2 font-medium sm:w-28">Từ loại</th>}
+                  <th className="px-3 py-2 font-medium">{cfg.descPh}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {items.map((it: any) => (
+                  <tr
+                    key={it.id}
+                    tabIndex={0}
+                    onClick={() => {
+                      setError(null);
+                      setDialog({ mode: 'view', item: it });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setError(null);
+                        setDialog({ mode: 'view', item: it });
+                      }
+                    }}
+                    className="cursor-pointer align-top hover:bg-paper focus-visible:bg-paper"
+                  >
+                    <td className="px-3 py-2.5 font-semibold text-ink">
+                      <RichText html={it[cfg.name] ?? ''} className="line-clamp-2 break-words" />
+                    </td>
+                    {cfg.hasPos && (
+                      <td className="px-3 py-2.5">
+                        <PosPill value={it.part_of_speech} />
+                      </td>
+                    )}
+                    <td className="px-3 py-2.5 text-ink-soft">
+                      <RichText html={it[cfg.desc] ?? ''} className="line-clamp-2 break-words" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {items.length === 0 && (
+              <p className="py-6 text-center text-sm text-ink-faint">
+                Chưa có {cfg.label.toLowerCase()} nào
+                {filter || (cfg.hasPos && posFilter) ? ' cho lựa chọn này' : ''}.
+              </p>
+            )}
+          </div>
+
+          {!done[tab] && items.length > 0 && (
+            <div ref={sentinelRef} className="flex h-10 items-center justify-center text-ink-faint">
+              {loadingMore && <Spinner />}
+            </div>
+          )}
+        </>
       )}
 
       <Dialog
