@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { DECK_LINK } from '@/components/vocab/NotebookNav';
 import { BookMarked, Plus, SpellCheck } from 'lucide-react';
 import Spinner from '@/components/ui/Spinner';
 import ConfirmButton from '@/components/ui/ConfirmButton';
@@ -168,14 +170,16 @@ export default function Notebook({
   initialVocab,
   initialGrammar,
   pageSize,
+  initialTab = 'vocab',
 }: {
   classes: Cls[];
   initialVocab: any[];
   initialGrammar: any[];
   pageSize: number;
+  initialTab?: Kind;
 }) {
   const supabase = createClient();
-  const [tab, setTab] = useState<Kind>('vocab');
+  const [tab, setTab] = useState<Kind>(initialTab);
   const [filter, setFilter] = useState<string>(ALL);
   const [posFilter, setPosFilter] = useState<string>(ALL); // chỉ áp cho từ vựng
 
@@ -419,6 +423,13 @@ export default function Notebook({
               </button>
             );
           })}
+          <Link
+            href={DECK_LINK.href}
+            className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-ink-soft hover:text-ink"
+          >
+            <DECK_LINK.Icon className="h-4 w-4" />
+            {DECK_LINK.label}
+          </Link>
         </div>
 
         <div className="flex items-center gap-2">

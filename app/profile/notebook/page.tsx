@@ -5,7 +5,7 @@ import Notebook from '@/components/Notebook';
 
 const PAGE = 10;
 
-export default async function NotebookPage() {
+export default async function NotebookPage({ searchParams }: { searchParams: { tab?: string } }) {
   const supabase = createClient();
   const user = await getUser();
 
@@ -53,6 +53,7 @@ export default async function NotebookPage() {
         initialVocab={vocab ?? []}
         initialGrammar={grammar ?? []}
         pageSize={PAGE}
+        initialTab={searchParams.tab === 'grammar' ? 'grammar' : 'vocab'}
       />
     </div>
   );
