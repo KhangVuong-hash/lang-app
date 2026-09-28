@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Check, Eye, EyeOff, Pencil } from 'lucide-react';
 import { familyMembers, isWordFamily, type VocabWord, type WordProgress } from '@/lib/vocab';
 
-/** số từ hiện thêm mỗi lần bấm "Xem thêm" */
-const STEP = 60;
+/** số từ hiện thêm mỗi lần cuộn gần tới cuối danh sách */
+const STEP = 20;
 
 export function TypePill({ type }: { type: string }) {
   return <span className="pill shrink-0 bg-brand/10 text-brand">{type}</span>;
@@ -81,6 +81,26 @@ export default function WordList({
   const [hideMeaning, setHideMeaning] = useState(false);
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
   const [limit, setLimit] = useState(STEP);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // đổi bộ lọc / tìm kiếm -> hiện lại từ 20 từ đầu
+  useEffect(() => setLimit(STEP), [words]);
+
+  // Lazy load: cuộn tới gần cuối thì hiện thêm STEP từ. Dữ liệu cả bộ đã có sẵn
+  // (cần cho tìm kiếm, tiến độ theo nhóm, trắc nghiệm) - chỉ giới hạn số dòng vẽ ra.
+  // Chạy lại sau mỗi lần tăng limit để nạp tiếp nếu sentinel vẫn trong khung nhìn.
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || limit >= words.length) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) setLimit((l) => l + STEP);
+      },
+      { rootMargin: '200px' }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [limit, words.length]);
 
   const toggleReveal = (id: string) =>
     setRevealed((s) => {
@@ -177,14 +197,8 @@ export default function WordList({
       )}
 
       {words.length > limit && (
-        <div className="mt-3 text-center">
-          <button
-            type="button"
-            onClick={() => setLimit((l) => l + STEP)}
-            className="btn-secondary btn-sm"
-          >
-            Xem thêm ({words.length - limit} từ)
-          </button>
+        <div ref={sentinelRef} className="py-3 text-center text-xs text-ink-faint">
+          Đang tải thêm… ({Math.min(limit, words.length)}/{words.length} từ)
         </div>
       )}
     </div>
