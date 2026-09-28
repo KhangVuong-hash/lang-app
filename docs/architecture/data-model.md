@@ -37,6 +37,11 @@ study_schedules (owner_id → profiles, category_id? → study_categories, weekd
   └─ study_session_logs (schedule_id, owner_id, occurs_on, completed, actual_minutes?)  - kết quả từng buổi, dùng cho /profile/stats
        UNIQUE(schedule_id, occurs_on)
 
+vocab_decks (slug, title, categories text[])  - bộ từ dùng chung (VD: FCE), chỉ admin sửa
+  └─ vocab_deck_words (deck_id, position, word, type, meaning_vi, example?, category)
+       └─ vocab_word_progress (user_id, word_id, deck_id, known, correct/wrong_count, srs_box 1-5?, due_on?)  - tiến độ riêng từng user
+            PK(user_id, word_id)
+
 personal_notes (owner_id → profiles, title?, content? (HTML), image_paths text[] ≤ 20, pinned)  - ghi chú cá nhân
 ```
 
