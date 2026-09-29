@@ -154,34 +154,56 @@ export function emptyProgress(wordId: string): WordProgress {
 
 // ---------- Trắc nghiệm ----------
 
+/** chiều hỏi: 'en-vi' cho từ đoán nghĩa, 'vi-en' cho nghĩa đoán từ */
+export type StudyDirection = 'en-vi' | 'vi-en';
+
+export const STUDY_DIRECTIONS: { value: StudyDirection; label: string }[] = [
+  { value: 'en-vi', label: 'Anh → Việt' },
+  { value: 'vi-en', label: 'Việt → Anh' },
+];
+
 export type QuizQuestion = {
   word: VocabWord;
-  /** 4 nghĩa, đã xáo */
+  /** 4 đáp án (nghĩa, hoặc từ tiếng Anh khi hỏi ngược), đã xáo */
   options: string[];
   answer: string;
 };
 
 /**
- * Câu hỏi: từ tiếng Anh -> chọn nghĩa đúng trong 4 đáp án. 3 đáp án nhiễu lấy
- * trong cùng nhóm (ưu tiên cùng loại từ), thiếu thì lấy từ nhóm khác.
+ * Câu hỏi: từ tiếng Anh -> chọn nghĩa đúng (hoặc ngược lại: nghĩa -> chọn từ)
+ * trong 4 đáp án. 3 đáp án nhiễu lấy trong cùng nhóm (ưu tiên cùng loại từ),
+ * thiếu thì lấy từ nhóm khác. Khi hỏi ngược, bỏ các từ trùng nghĩa để không có
+ * hai đáp án cùng đúng (VD: "make a living" / "earn a living").
  */
-export function buildQuestion(word: VocabWord, all: VocabWord[]): QuizQuestion {
-  const seen = new Set([normalize(word.meaning_vi)]);
+export function buildQuestion(
+  word: VocabWord,
+  all: VocabWord[],
+  direction: StudyDirection = 'en-vi'
+): QuizQuestion {
+  const reverse = direction === 'vi-en';
+  const text = (w: VocabWord) => (reverse ? w.word : w.meaning_vi);
+  const meaning = normalize(word.meaning_vi);
+  const seen = new Set([normalize(text(word))]);
   const distractors: string[] = [];
   const take = (pool: VocabWord[]) => {
     for (const w of shuffle(pool)) {
       if (distractors.length >= 3) return;
-      const key = normalize(w.meaning_vi);
+      const key = normalize(text(w));
       if (w.id === word.id || seen.has(key)) continue;
+      if (reverse && normalize(w.meaning_vi) === meaning) continue;
       seen.add(key);
-      distractors.push(w.meaning_vi);
+      distractors.push(text(w));
     }
   };
   const sameCat = all.filter((w) => w.category === word.category);
   take(sameCat.filter((w) => w.type === word.type));
   take(sameCat);
   take(all);
-  return { word, options: shuffle([word.meaning_vi, ...distractors]), answer: word.meaning_vi };
+  return {
+    word,
+    options: shuffle([text(word), ...distractors]),
+    answer: text(word),
+  };
 }
 
 // ---------- Nạp dữ liệu ----------

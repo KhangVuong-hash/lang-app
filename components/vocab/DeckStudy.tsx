@@ -14,6 +14,8 @@ import { todayLocal } from '@/lib/schedule';
 import {
   emptyProgress,
   matchesSearch,
+  STUDY_DIRECTIONS,
+  type StudyDirection,
   type VocabDeck,
   type VocabWord,
   type WordProgress,
@@ -73,6 +75,7 @@ export default function DeckStudy({
   const [category, setCategory] = useState(ALL);
   const [search, setSearch] = useState('');
   const [knownFilter, setKnownFilter] = useState<KnownFilter>('');
+  const [direction, setDirection] = useState<StudyDirection>('en-vi');
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ word?: VocabWord } | null>(null);
 
@@ -283,6 +286,27 @@ export default function DeckStudy({
               aria-label="Lọc theo đã thuộc"
               options={KNOWN_FILTERS}
             />
+            {(mode === 'cards' || mode === 'quiz') && (
+              <div
+                className="inline-flex rounded-lg border border-line p-0.5"
+                role="group"
+                aria-label="Chiều hỏi"
+              >
+                {STUDY_DIRECTIONS.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setDirection(value)}
+                    aria-pressed={direction === value}
+                    className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+                      direction === value ? 'bg-brand text-white' : 'text-ink-soft hover:text-ink'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -300,18 +324,20 @@ export default function DeckStudy({
         )}
         {mode === 'cards' && (
           <Flashcards
-            // đổi bộ lọc -> bắt đầu lại bộ thẻ
-            key={`${category}|${knownFilter}|${search}`}
+            // đổi bộ lọc / chiều hỏi -> bắt đầu lại bộ thẻ
+            key={`${category}|${knownFilter}|${search}|${direction}`}
             words={filtered}
+            direction={direction}
             progressOf={progressOf}
             onToggleKnown={toggleKnown}
           />
         )}
         {mode === 'quiz' && (
           <Quiz
-            key={`${category}|${knownFilter}|${search}`}
+            key={`${category}|${knownFilter}|${search}|${direction}`}
             pool={filtered}
             all={words}
+            direction={direction}
             progressOf={progressOf}
             onAnswer={saveProgress}
             today={today}
