@@ -10,6 +10,7 @@ import {
   isWordFamily,
   shuffle,
   type QuizQuestion,
+  type StudyDirection,
   type VocabWord,
   type WordProgress,
 } from '@/lib/vocab';
@@ -18,11 +19,13 @@ const LENGTHS = [10, 20, 30];
 
 /**
  * Trắc nghiệm: từ tiếng Anh -> chọn nghĩa đúng trong 4 đáp án (đáp án nhiễu cùng
- * nhóm). Trả lời sai -> từ vào hàng ôn tập ngắt quãng. Phím 1-4 chọn, Enter qua câu.
+ * nhóm), hoặc ngược lại (direction = 'vi-en'): nghĩa -> chọn từ tiếng Anh.
+ * Trả lời sai -> từ vào hàng ôn tập ngắt quãng. Phím 1-4 chọn, Enter qua câu.
  */
 export default function Quiz({
   pool,
   all,
+  direction,
   progressOf,
   onAnswer,
   today,
@@ -32,6 +35,7 @@ export default function Quiz({
   pool: VocabWord[];
   /** cả bộ, để lấy đáp án nhiễu */
   all: VocabWord[];
+  direction: StudyDirection;
   progressOf: (id: string) => WordProgress;
   onAnswer: (p: WordProgress) => void;
   today: string;
@@ -45,12 +49,13 @@ export default function Quiz({
 
   function start() {
     const words = shuffle(pool).slice(0, length);
-    setQuestions(words.map((w) => buildQuestion(w, all)));
+    setQuestions(words.map((w) => buildQuestion(w, all, direction)));
     setIndex(0);
     setPicked(null);
     setWrong([]);
   }
 
+  const reverse = direction === 'vi-en';
   const q = questions?.[index];
   const finished = !!questions && index >= questions.length;
 
@@ -93,10 +98,14 @@ export default function Quiz({
   if (!questions)
     return (
       <div className="mx-auto max-w-md py-6 text-center">
-        <h3 className="font-display text-lg font-semibold text-ink">Trắc nghiệm nghĩa của từ</h3>
+        <h3 className="font-display text-lg font-semibold text-ink">
+          {reverse ? 'Trắc nghiệm: đoán từ tiếng Anh' : 'Trắc nghiệm nghĩa của từ'}
+        </h3>
         <p className="mt-1 text-sm text-ink-soft">
-          Chọn nghĩa tiếng Việt đúng trong 4 đáp án. Từ trả lời sai sẽ được đưa vào mục Ôn tập. Đang
-          hỏi trong {pool.length} từ khớp bộ lọc.
+          {reverse
+            ? 'Cho nghĩa tiếng Việt, chọn từ tiếng Anh đúng trong 4 đáp án.'
+            : 'Chọn nghĩa tiếng Việt đúng trong 4 đáp án.'}{' '}
+          Từ trả lời sai sẽ được đưa vào mục Ôn tập. Đang hỏi trong {pool.length} từ khớp bộ lọc.
         </p>
         <div className="mt-4 inline-flex rounded-lg border border-line p-0.5">
           {LENGTHS.map((n) => (
@@ -174,7 +183,9 @@ export default function Quiz({
       </div>
 
       <div className="py-6 text-center">
-        <p className="font-display text-3xl font-bold text-ink">{q!.word.word}</p>
+        <p className={`font-display font-bold text-ink ${reverse ? 'text-2xl' : 'text-3xl'}`}>
+          {reverse ? q!.word.meaning_vi : q!.word.word}
+        </p>
         <p className="mt-2">
           <TypePill type={q!.word.type} />
         </p>
