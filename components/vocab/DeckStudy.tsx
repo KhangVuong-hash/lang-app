@@ -30,6 +30,14 @@ const MODES = [
 
 const ALL = '';
 
+type KnownFilter = '' | 'unknown' | 'known';
+
+const KNOWN_FILTERS: { value: KnownFilter; label: string }[] = [
+  { value: '', label: 'Tất cả từ' },
+  { value: 'unknown', label: 'Chỉ từ chưa thuộc' },
+  { value: 'known', label: 'Chỉ từ đã thuộc' },
+];
+
 function Bar({ value, total }: { value: number; total: number }) {
   const pct = total ? Math.round((value / total) * 100) : 0;
   return (
@@ -64,7 +72,7 @@ export default function DeckStudy({
   const [mode, setMode] = useState<Mode>('list');
   const [category, setCategory] = useState(ALL);
   const [search, setSearch] = useState('');
-  const [onlyUnknown, setOnlyUnknown] = useState(false);
+  const [knownFilter, setKnownFilter] = useState<KnownFilter>('');
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ word?: VocabWord } | null>(null);
 
@@ -101,10 +109,10 @@ export default function DeckStudy({
       words.filter(
         (w) =>
           (!category || w.category === category) &&
-          (!onlyUnknown || !progress.get(w.id)?.known) &&
+          (!knownFilter || !!progress.get(w.id)?.known === (knownFilter === 'known')) &&
           matchesSearch(w, search)
       ),
-    [words, category, onlyUnknown, search, progress]
+    [words, category, knownFilter, search, progress]
   );
 
   /** Lưu tiến độ một từ: cập nhật ngay trên màn hình, lỗi thì hoàn tác. */
@@ -268,15 +276,13 @@ export default function DeckStudy({
                 ...categories.map((c) => ({ value: c, label: c })),
               ]}
             />
-            <label className="inline-flex items-center gap-2 text-sm text-ink-soft">
-              <input
-                type="checkbox"
-                checked={onlyUnknown}
-                onChange={(e) => setOnlyUnknown(e.target.checked)}
-                className="h-4 w-4 accent-brand"
-              />
-              Chỉ từ chưa thuộc
-            </label>
+            <SimpleSelect
+              value={knownFilter}
+              onChange={(v) => setKnownFilter(v as KnownFilter)}
+              className="w-auto min-w-[11rem]"
+              aria-label="Lọc theo đã thuộc"
+              options={KNOWN_FILTERS}
+            />
           </div>
         )}
 
@@ -295,7 +301,7 @@ export default function DeckStudy({
         {mode === 'cards' && (
           <Flashcards
             // đổi bộ lọc -> bắt đầu lại bộ thẻ
-            key={`${category}|${onlyUnknown}|${search}`}
+            key={`${category}|${knownFilter}|${search}`}
             words={filtered}
             progressOf={progressOf}
             onToggleKnown={toggleKnown}
@@ -303,7 +309,7 @@ export default function DeckStudy({
         )}
         {mode === 'quiz' && (
           <Quiz
-            key={`${category}|${onlyUnknown}|${search}`}
+            key={`${category}|${knownFilter}|${search}`}
             pool={filtered}
             all={words}
             progressOf={progressOf}
