@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { SkipBack, Repeat } from 'lucide-react';
+import { Check, Play, Repeat, SkipBack } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 export type ScriptSegment = {
   id?: string;
@@ -10,6 +11,11 @@ export type ScriptSegment = {
   end_seconds: number;
   text_content: string;
 };
+
+type ListeningProgress = {
+  last_position: number;
+  completed_segment_ids: string[];
+} | null;
 
 declare global {
   interface Window {
@@ -36,15 +42,28 @@ function loadYoutubeApi(): Promise<void> {
 
 export default function YouTubeScriptPlayer({
   videoId,
+  lessonId,
+  userId,
   segments,
+  initialProgress,
 }: {
   videoId: string;
+  lessonId: string;
+  userId: string;
   segments: ScriptSegment[];
+  initialProgress: ListeningProgress;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
   const loopSegmentRef = useRef<ScriptSegment | null>(null);
   const rafRef = useRef<number | null>(null);
+  const lastObservedTimeRef = useRef(initialProgress?.last_position ?? 0);
+  const lastSavedPositionRef = useRef(initialProgress?.last_position ?? 0);
+  const progressRef = useRef({
+    lastPosition: initialProgress?.last_position ?? 0,
+    completedSegmentIds: new Set(initialProgress?.completed_segment_ids ?? []),
+  });
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   const [ready, setReady] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -52,6 +71,44 @@ export default function YouTubeScriptPlayer({
   const [loopEnabled, setLoopEnabled] = useState(false);
   const [activeSegmentIdx, setActiveSegmentIdx] = useState<number | null>(null);
   const [playbackRate, setPlaybackRate] = useState(1);
+  const [completedSegmentIds, setCompletedSegmentIds] = useState(
+    () => new Set(initialProgress?.completed_segment_ids ?? [])
+  );
+
+  const persistProgress = useCallback(() => {
+    lastSavedPositionRef.current = progressRef.current.lastPosition;
+    const supabase = createClient();
+    saveQueueRef.current = saveQueueRef.current.then(async () => {
+      const { error } = await supabase.from('listening_progress').upsert(
+        {
+          user_id: userId,
+          lesson_id: lessonId,
+          last_position: progressRef.current.lastPosition,
+          completed_segment_ids: [...progressRef.current.completedSegmentIds],
+        },
+        { onConflict: 'user_id,lesson_id' }
+      );
+      if (error) console.error('Could not save listening progress:', error.message);
+    });
+  }, [lessonId, userId]);
+
+  const markSegmentComplete = useCallback(
+    (segmentId: string) => {
+      if (progressRef.current.completedSegmentIds.has(segmentId)) return;
+      progressRef.current.completedSegmentIds.add(segmentId);
+      setCompletedSegmentIds(new Set(progressRef.current.completedSegmentIds));
+      persistProgress();
+    },
+    [persistProgress]
+  );
+
+  function toggleSegmentComplete(segmentId: string) {
+    const completed = progressRef.current.completedSegmentIds;
+    if (completed.has(segmentId)) completed.delete(segmentId);
+    else completed.add(segmentId);
+    setCompletedSegmentIds(new Set(completed));
+    persistProgress();
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -61,9 +118,19 @@ export default function YouTubeScriptPlayer({
         videoId,
         playerVars: { rel: 0, modestbranding: 1 },
         events: {
-          onReady: () => setReady(true),
+          onReady: (e: any) => {
+            if (initialProgress?.last_position) {
+              e.target.seekTo(initialProgress.last_position, true);
+            }
+            lastObservedTimeRef.current = e.target.getCurrentTime();
+            setReady(true);
+          },
           onStateChange: (e: any) => {
             setIsPlaying(e.data === window.YT.PlayerState.PLAYING);
+            if (e.data === window.YT.PlayerState.PAUSED) {
+              progressRef.current.lastPosition = e.target.getCurrentTime();
+              persistProgress();
+            }
           },
         },
       });
@@ -74,7 +141,7 @@ export default function YouTubeScriptPlayer({
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [videoId]);
+  }, [videoId, persistProgress]);
 
   // Vòng lặp theo dõi currentTime + xử lý loop 1 segment
   useEffect(() => {
@@ -82,6 +149,20 @@ export default function YouTubeScriptPlayer({
       if (playerRef.current?.getCurrentTime) {
         const t = playerRef.current.getCurrentTime();
         setCurrentTime(t);
+        const previousTime = lastObservedTimeRef.current;
+        progressRef.current.lastPosition = t;
+        if (t > previousTime && t - previousTime < 1.5) {
+          const justCompleted = segments.find(
+            (segment) => segment.id && previousTime < segment.end_seconds && t >= segment.end_seconds
+          );
+          if (justCompleted?.id) markSegmentComplete(justCompleted.id);
+        }
+        lastObservedTimeRef.current = t;
+
+        if (isPlaying && Math.abs(t - lastSavedPositionRef.current) >= 3) {
+          lastSavedPositionRef.current = t;
+          persistProgress();
+        }
 
         const idx = segments.findIndex((s) => t >= s.start_seconds && t < s.end_seconds);
         setActiveSegmentIdx(idx >= 0 ? idx : null);
@@ -96,7 +177,7 @@ export default function YouTubeScriptPlayer({
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [segments, loopEnabled]);
+  }, [segments, loopEnabled, isPlaying, markSegmentComplete, persistProgress]);
 
   const seekToSegment = useCallback((seg: ScriptSegment, autoplay = true) => {
     if (!playerRef.current) return;
@@ -123,9 +204,19 @@ export default function YouTubeScriptPlayer({
     playerRef.current?.setPlaybackRate?.(rate);
   }
 
+  function resumeListening() {
+    if (!playerRef.current) return;
+    playerRef.current.seekTo(progressRef.current.lastPosition, true);
+    playerRef.current.playVideo();
+  }
+
   function replaySegment(seg: ScriptSegment) {
     seekToSegment(seg, true);
   }
+
+  const completedCount = segments.filter(
+    (segment) => segment.id && completedSegmentIds.has(segment.id)
+  ).length;
 
   return (
     <div className="grid gap-4 lg:grid-cols-5">
@@ -148,6 +239,16 @@ export default function YouTubeScriptPlayer({
               {r}x
             </button>
           ))}
+          {initialProgress?.last_position || currentTime > 0 ? (
+            <button
+              onClick={resumeListening}
+              disabled={!ready}
+              className="btn-primary btn-sm ml-auto inline-flex items-center gap-1.5"
+              title={`Tiếp tục từ ${formatTime(progressRef.current.lastPosition)}`}
+            >
+              <Play className="h-3.5 w-3.5" /> Tiếp tục {formatTime(progressRef.current.lastPosition)}
+            </button>
+          ) : null}
           {loopEnabled && (
             <span className="pill ml-auto inline-flex items-center gap-1 bg-highlight-soft text-ink">
               <Repeat className="h-3 w-3" /> Đang lặp câu #{(loopSegmentRef.current?.order_index ?? 0) + 1}
@@ -158,6 +259,10 @@ export default function YouTubeScriptPlayer({
 
       {/* Script list */}
       <div className="card max-h-[480px] overflow-y-auto lg:col-span-3">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-white px-4 py-2 text-xs text-ink-soft">
+          <span>Đã nghe {completedCount}/{segments.length} câu</span>
+          {activeSegmentIdx !== null && <span>Đang học câu #{activeSegmentIdx + 1}</span>}
+        </div>
         {segments.length === 0 && (
           <p className="p-4 text-sm text-ink-soft">Chưa có script cho video này.</p>
         )}
@@ -174,6 +279,21 @@ export default function YouTubeScriptPlayer({
               </span>
               <p className="flex-1 leading-relaxed">{seg.text_content}</p>
               <div className="flex shrink-0 gap-1">
+                {seg.id && (
+                  <button
+                    title={completedSegmentIds.has(seg.id) ? 'Đánh dấu chưa học' : 'Đánh dấu đã học'}
+                    aria-label={completedSegmentIds.has(seg.id) ? 'Đánh dấu chưa học' : 'Đánh dấu đã học'}
+                    aria-pressed={completedSegmentIds.has(seg.id)}
+                    onClick={() => toggleSegmentComplete(seg.id!)}
+                    className={`inline-flex h-7 w-7 items-center justify-center rounded-md border ${
+                      completedSegmentIds.has(seg.id)
+                        ? 'border-emerald-600 bg-emerald-50 text-emerald-700'
+                        : 'border-line text-ink-faint hover:bg-paper'
+                    }`}
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                  </button>
+                )}
                 <button
                   title="Tua lại đoạn này"
                   onClick={() => replaySegment(seg)}
