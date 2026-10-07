@@ -25,11 +25,19 @@ export default async function ListeningLessonPage({
     .single();
   if (!lesson) notFound();
 
-  const { data: segments } = await supabase
-    .from('listening_script_segments')
-    .select('*')
-    .eq('lesson_id', params.lessonId)
-    .order('order_index', { ascending: true });
+  const [{ data: segments }, { data: progress }] = await Promise.all([
+    supabase
+      .from('listening_script_segments')
+      .select('*')
+      .eq('lesson_id', params.lessonId)
+      .order('order_index', { ascending: true }),
+    supabase
+      .from('listening_progress')
+      .select('last_position, completed_segment_ids')
+      .eq('lesson_id', params.lessonId)
+      .eq('user_id', access.userId)
+      .maybeSingle(),
+  ]);
 
   return (
     <div className="container-page py-8">
@@ -46,7 +54,13 @@ export default async function ListeningLessonPage({
         </Link>
       </PageHeader>
 
-      <YouTubeScriptPlayer videoId={lesson.youtube_video_id} segments={segments ?? []} />
+      <YouTubeScriptPlayer
+        videoId={lesson.youtube_video_id}
+        lessonId={params.lessonId}
+        userId={access.userId}
+        segments={segments ?? []}
+        initialProgress={progress}
+      />
 
       <p className="mt-3 text-xs text-ink-faint">
         Mẹo: bấm <strong>Tua</strong> để nghe lại một câu, bấm <strong>Lặp</strong> để tự động
