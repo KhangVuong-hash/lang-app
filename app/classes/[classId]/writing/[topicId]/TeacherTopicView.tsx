@@ -5,6 +5,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import DeleteResource from '@/components/DeleteResource';
 import ReviewForm from './ReviewForm';
+import WritingEditor from './WritingEditor';
 import CommentThread from '@/components/CommentThread';
 import { FileText } from 'lucide-react';
 
@@ -39,7 +40,8 @@ export default async function TeacherTopicView({
     .eq('topic_id', topicId)
     .order('updated_at', { ascending: false });
 
-  const list = submissions ?? [];
+  // bài tự làm của người ra đề hiện ở ô soạn bài bên trên, không lẫn vào danh sách học sinh
+  const list = (submissions ?? []).filter((s: any) => s.student_id !== userId);
 
   return (
     <div className="container-page py-8">
@@ -63,6 +65,13 @@ export default async function TeacherTopicView({
         </p>
       )}
 
+      <section className="card mb-6 p-4">
+        <h2 className="font-semibold text-ink">Bài làm của bạn</h2>
+        <p className="text-xs text-ink-faint">Tự làm bài để luyện tập, lưu nháp hoặc nộp bất cứ lúc nào.</p>
+        <WritingEditor topicId={topicId} topicType={topic.topic_type} userId={userId} selfStudy />
+      </section>
+
+      <h2 className="mb-3 font-semibold text-ink">Bài nộp của học sinh ({list.length})</h2>
       {list.length === 0 ? (
         <EmptyState icon={FileText} title="Chưa có học sinh nào nộp bài" />
       ) : (
