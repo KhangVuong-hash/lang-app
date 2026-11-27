@@ -10,11 +10,14 @@ import EmptyState from '@/components/ui/EmptyState';
 import Spinner from '@/components/ui/Spinner';
 import ConfirmButton from '@/components/ui/ConfirmButton';
 import { cleanHtml, isEmptyHtml } from '@/lib/rich-text';
+import { SKILL_MAP, type SkillKey } from '@/lib/constants';
 import {
   ACCEPTED_IMAGE_TYPES,
   MAX_NOTE_IMAGES,
   NOTES_PAGE_SIZE,
   NOTE_COLUMNS,
+  NOTE_SKILLS,
+  bySkill,
   removeNoteImages,
   signImages,
   uploadNoteImage,
@@ -43,10 +46,13 @@ function formatDateTime(iso: string) {
 
 export default function PersonalNotes({
   userId,
+  skill,
   initialNotes,
   initialUrls,
 }: {
   userId: string;
+  /** mục kỹ năng đang xem; null = ghi chú cũ chưa phân loại */
+  skill: SkillKey | null;
   initialNotes: PersonalNote[];
   initialUrls: Urls;
 }) {
@@ -63,10 +69,10 @@ export default function PersonalNotes({
   const addUrls = (more: Urls) => setUrls((u) => ({ ...u, ...more }));
 
   async function fetchPage(q: string, offset: number) {
-    let req = supabase
-      .from('personal_notes')
-      .select(NOTE_COLUMNS)
-      .is('deleted_at', null)
+    let req = bySkill(
+      supabase.from('personal_notes').select(NOTE_COLUMNS).is('deleted_at', null),
+      skill
+    )
       .order('pinned', { ascending: false })
       .order('updated_at', { ascending: false })
       .range(offset, offset + NOTES_PAGE_SIZE - 1);
@@ -114,7 +120,12 @@ export default function PersonalNotes({
   }, [notes.length, done, loading, query]);
 
   function onSaved(note: PersonalNote) {
-    setNotes((ns) => sortNotes([note, ...ns.filter((n) => n.id !== note.id)]));
+    // ghi chú được chuyển sang kỹ năng khác thì rời khỏi mục này
+    setNotes((ns) =>
+      note.skill === skill
+        ? sortNotes([note, ...ns.filter((n) => n.id !== note.id)])
+        : ns.filter((n) => n.id !== note.id)
+    );
     setDialog(null);
   }
 
@@ -131,15 +142,17 @@ export default function PersonalNotes({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Tìm trong ghi chú…"
+            placeholder={skill ? `Tìm trong ghi chú ${SKILL_MAP[skill].label.toLowerCase()}…` : 'Tìm trong ghi chú…'}
             className="input pl-9"
             aria-label="Tìm ghi chú"
           />
         </div>
-        <button onClick={() => setDialog({})} className="btn-primary h-10">
-          <Plus className="h-4 w-4" />
-          Ghi chú mới
-        </button>
+        {skill && (
+          <button onClick={() => setDialog({})} className="btn-primary h-10">
+            <Plus className="h-4 w-4" />
+            Ghi chú mới
+          </button>
+        )}
       </div>
 
       {notes.length === 0 && !loading ? (
@@ -150,13 +163,19 @@ export default function PersonalNotes({
         ) : (
           <EmptyState
             icon={StickyNote}
-            title="Chưa có ghi chú nào"
-            hint="Ghi lại bất cứ điều gì cần nhớ - mẹo học, lịch thi, ảnh chụp bảng, tài liệu…"
+            title={
+              skill
+                ? `Chưa có ghi chú kỹ năng ${SKILL_MAP[skill].label}`
+                : 'Không còn ghi chú chưa phân loại'
+            }
+            hint={skill ? EMPTY_HINT[skill] : 'Mọi ghi chú đã được xếp vào một kỹ năng.'}
           >
-            <button onClick={() => setDialog({})} className="btn-primary mt-2">
-              <Plus className="h-4 w-4" />
-              Ghi chú mới
-            </button>
+            {skill && (
+              <button onClick={() => setDialog({})} className="btn-primary mt-2">
+                <Plus className="h-4 w-4" />
+                Ghi chú mới
+              </button>
+            )}
           </EmptyState>
         )
       ) : (
@@ -181,12 +200,15 @@ export default function PersonalNotes({
       <Dialog open={!!dialog} onOpenChange={(o) => !o && setDialog(null)}>
         <DialogContent className="max-w-2xl">
           <DialogTitle className="mb-3 pr-8 font-display text-lg font-semibold text-ink">
-            {dialog?.note ? 'Sửa ghi chú' : 'Ghi chú mới'}
+            {dialog?.note
+              ? 'Sửa ghi chú'
+              : `Ghi chú mới · ${skill ? SKILL_MAP[skill].label : ''}`}
           </DialogTitle>
           {dialog && (
             <NoteEditor
               key={dialog.note?.id ?? 'new'}
               userId={userId}
+              skill={skill}
               note={dialog.note}
               urls={urls}
               onUrls={addUrls}
@@ -200,6 +222,13 @@ export default function PersonalNotes({
     </div>
   );
 }
+
+const EMPTY_HINT: Record<SkillKey, string> = {
+  listening: 'Ghi lại mẹo nghe, từ hay nghe nhầm, nguồn podcast/video hữu ích…',
+  speaking: 'Ghi lại mẫu câu, cách phát âm, ý tưởng trả lời các chủ đề nói…',
+  reading: 'Ghi lại chiến lược làm bài đọc, từ mới gặp trong bài, đoạn văn hay…',
+  writing: 'Ghi lại cấu trúc bài viết, cụm từ nối, lỗi hay mắc, bài mẫu…',
+};
 
 function NoteCard({
   note,
@@ -252,6 +281,7 @@ function NoteCard({
 
 function NoteEditor({
   userId,
+  skill,
   note,
   urls,
   onUrls,
@@ -260,6 +290,7 @@ function NoteEditor({
   onCancel,
 }: {
   userId: string;
+  skill: SkillKey | null;
   note?: PersonalNote;
   urls: Urls;
   onUrls: (u: Urls) => void;
@@ -272,6 +303,7 @@ function NoteEditor({
   const [content, setContent] = useState(note?.content ?? '');
   const [images, setImages] = useState<string[]>(note?.image_paths ?? []);
   const [pinned, setPinned] = useState(note?.pinned ?? false);
+  const [noteSkill, setNoteSkill] = useState<SkillKey | ''>(note?.skill ?? skill ?? '');
   const [uploading, setUploading] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -339,8 +371,9 @@ function NoteEditor({
       if (!note) return onCancel();
       return setError('Ghi chú đang trống - hãy nhập nội dung hoặc xoá ghi chú.');
     }
+    if (!noteSkill) return setError('Hãy chọn kỹ năng cho ghi chú.');
     setSaving(true);
-    const payload = { title: title.trim() || null, content: body, image_paths: images, pinned };
+    const payload = { skill: noteSkill, title: title.trim() || null, content: body, image_paths: images, pinned };
     const { data, error } = note
       ? await supabase
           .from('personal_notes')
@@ -377,6 +410,30 @@ function NoteEditor({
         }
       }}
     >
+      <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Kỹ năng">
+        {NOTE_SKILLS.map((k) => {
+          const s = SKILL_MAP[k];
+          const on = noteSkill === k;
+          return (
+            <button
+              key={k}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() => setNoteSkill(k)}
+              className="pill border"
+              style={
+                on
+                  ? { backgroundColor: s.color, borderColor: s.color, color: '#fff' }
+                  : { borderColor: `${s.color}55`, color: s.color }
+              }
+            >
+              {s.label}
+            </button>
+          );
+        })}
+      </div>
+
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}

@@ -42,7 +42,7 @@ vocab_decks (slug, title, categories text[])  - bộ từ dùng chung (VD: FCE),
        └─ vocab_word_progress (user_id, word_id, deck_id, known, correct/wrong_count, srs_box 1-5?, due_on?)  - tiến độ riêng từng user
             PK(user_id, word_id)
 
-personal_notes (owner_id → profiles, title?, content? (HTML), image_paths text[] ≤ 20, pinned)  - ghi chú cá nhân
+personal_notes (owner_id → profiles, skill? skill_type, title?, content? (HTML), image_paths text[] ≤ 20, pinned)  - ghi chú tab Language (skill null = ghi chú cũ chưa phân loại)
 ```
 
 ## Trigger

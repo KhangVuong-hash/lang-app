@@ -2,13 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChartColumn, CalendarDays, NotebookPen, StickyNote, UserRound } from 'lucide-react';
+import { ChartColumn, CalendarDays, Languages, NotebookPen, UserRound } from 'lucide-react';
 
 const TABS = [
   { href: '/profile', label: 'Tổng quan', Icon: UserRound },
   { href: '/profile/schedule', label: 'Thời khóa biểu', Icon: CalendarDays },
   { href: '/profile/stats', label: 'Thống kê', Icon: ChartColumn },
-  { href: '/profile/notes', label: 'Ghi chú', Icon: StickyNote },
+  { href: '/profile/language', label: 'Language', Icon: Languages },
   { href: '/profile/notebook', label: 'Sổ tay', Icon: NotebookPen },
 ];
 

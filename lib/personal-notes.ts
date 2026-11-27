@@ -1,7 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { SkillKey } from './constants';
 
 export const NOTE_BUCKET = 'personal-notes';
-export const NOTE_COLUMNS = 'id, title, content, image_paths, pinned, created_at, updated_at';
+export const NOTE_COLUMNS = 'id, skill, title, content, image_paths, pinned, created_at, updated_at';
 export const NOTES_PAGE_SIZE = 12;
 export const MAX_NOTE_IMAGES = 20;
 /** signed URL sống 1 giờ - trang tự tải lại link khi mở lại */
@@ -9,6 +10,8 @@ const SIGNED_URL_TTL = 3600;
 
 export type PersonalNote = {
   id: string;
+  /** null = ghi chú cũ chưa gắn kỹ năng */
+  skill: SkillKey | null;
   title: string | null;
   content: string | null;
   image_paths: string[];
@@ -16,6 +19,14 @@ export type PersonalNote = {
   created_at: string;
   updated_at: string;
 };
+
+/** Thứ tự các mục trong tab Language */
+export const NOTE_SKILLS: SkillKey[] = ['listening', 'speaking', 'reading', 'writing'];
+
+/** Lọc truy vấn personal_notes theo kỹ năng (null = chưa phân loại) */
+export function bySkill<Q extends { eq: any; is: any }>(req: Q, skill: SkillKey | null): Q {
+  return skill ? req.eq('skill', skill) : req.is('skill', null);
+}
 
 /** Tạo signed URL cho các ảnh trong bucket private → { path: url } */
 export async function signImages(
