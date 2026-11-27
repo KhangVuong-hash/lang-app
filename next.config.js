@@ -2,7 +2,11 @@
 const nextConfig = {
   // Sổ tay đã chuyển vào trang cá nhân
   async redirects() {
-    return [{ source: '/notebook', destination: '/profile/notebook', permanent: true }];
+    return [
+      { source: '/notebook', destination: '/profile/notebook', permanent: true },
+      // tab "Ghi chú" đã gộp vào tab "Language" (ghi chú theo kỹ năng)
+      { source: '/profile/notes', destination: '/profile/language', permanent: true },
+    ];
   },
   experimental: {
     serverActions: { allowedOrigins: ['localhost:3000'] },

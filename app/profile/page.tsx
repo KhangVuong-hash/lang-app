@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { NotebookPen, ChevronRight, CalendarDays, StickyNote } from 'lucide-react';
+import { NotebookPen, ChevronRight, CalendarDays, Languages } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { getMyProfile, getUser } from '@/lib/auth';
 import PageHeader from '@/components/ui/PageHeader';
@@ -98,15 +98,15 @@ export default async function ProfilePage() {
           <div className="card p-5 text-sm text-ink-faint">Bạn chưa dạy hay học lớp nào.</div>
         )}
         <Link
-          href="/profile/notes"
+          href="/profile/language"
           className="card card-hover flex items-center justify-between gap-3 p-5"
         >
           <span className="flex items-center gap-3">
-            <StickyNote className="h-5 w-5 shrink-0 text-brand" />
+            <Languages className="h-5 w-5 shrink-0 text-brand" />
             <span>
-              <span className="block font-display font-semibold text-ink">Ghi chú của tôi</span>
+              <span className="block font-display font-semibold text-ink">Sổ ghi chú Language</span>
               <span className="block text-sm text-ink-soft">
-                Ghi lại thông tin cần nhớ, kèm hình ảnh
+                Ghi chú theo 4 kỹ năng nghe, nói, đọc, viết
               </span>
             </span>
           </span>
