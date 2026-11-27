@@ -10,6 +10,7 @@ import {
   NOTES_PAGE_SIZE,
   NOTE_COLUMNS,
   NOTE_SKILLS,
+  applyNoteFilters,
   bySkill,
   signImages,
   type PersonalNote,
@@ -48,13 +49,11 @@ export default async function LanguageNotesPage({
         ? (param as SkillKey)
         : 'listening';
 
-  const { data } = await bySkill(
+  const base = bySkill(
     supabase.from('personal_notes').select(NOTE_COLUMNS).is('deleted_at', null),
     skill
-  )
-    .order('pinned', { ascending: false })
-    .order('updated_at', { ascending: false })
-    .range(0, NOTES_PAGE_SIZE - 1);
+  );
+  const { data } = await applyNoteFilters(base, 'all', 'updated').range(0, NOTES_PAGE_SIZE - 1);
   const notes = (data ?? []) as PersonalNote[];
   // chỉ ký sẵn ảnh bìa; ảnh còn lại ký khi mở ghi chú
   const urls = await signImages(supabase, notes.map((n) => n.image_paths[0]).filter(Boolean));

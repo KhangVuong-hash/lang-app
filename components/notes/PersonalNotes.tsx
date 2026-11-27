@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ImagePlus, Images, Pin, Plus, Search, StickyNote, X } from 'lucide-react';
+import { ArrowUpDown, ImagePlus, Images, Pin, Plus, Search, StickyNote, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import RichTextEditor, { RichTextToolbar } from '@/components/ui/RichTextEditor';
@@ -17,22 +17,22 @@ import {
   NOTES_PAGE_SIZE,
   NOTE_COLUMNS,
   NOTE_SKILLS,
+  NOTE_SORTS,
+  NOTE_VIEWS,
+  applyNoteFilters,
   bySkill,
+  compareNotes,
+  matchesNoteView,
   removeNoteImages,
   signImages,
   uploadNoteImage,
   validateImage,
+  type NoteSort,
+  type NoteView,
   type PersonalNote,
 } from '@/lib/personal-notes';
 
 type Urls = Record<string, string>;
-
-/** ghim lên đầu, sau đó ghi chú sửa gần nhất */
-function sortNotes(list: PersonalNote[]) {
-  return [...list].sort(
-    (a, b) => Number(b.pinned) - Number(a.pinned) || b.updated_at.localeCompare(a.updated_at)
-  );
-}
 
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString('vi-VN', {
@@ -62,20 +62,23 @@ export default function PersonalNotes({
   const [done, setDone] = useState(initialNotes.length < NOTES_PAGE_SIZE);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState('');
+  const [debounced, setDebounced] = useState('');
+  const [view, setView] = useState<NoteView>('all');
+  const [sort, setSort] = useState<NoteSort>('updated');
   const [dialog, setDialog] = useState<{ note?: PersonalNote } | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const firstRender = useRef(true);
+  // bỏ kết quả của truy vấn cũ khi người dùng đổi bộ lọc liên tục
+  const reqId = useRef(0);
 
   const addUrls = (more: Urls) => setUrls((u) => ({ ...u, ...more }));
 
   async function fetchPage(q: string, offset: number) {
-    let req = bySkill(
-      supabase.from('personal_notes').select(NOTE_COLUMNS).is('deleted_at', null),
-      skill
-    )
-      .order('pinned', { ascending: false })
-      .order('updated_at', { ascending: false })
-      .range(offset, offset + NOTES_PAGE_SIZE - 1);
+    let req = applyNoteFilters(
+      bySkill(supabase.from('personal_notes').select(NOTE_COLUMNS).is('deleted_at', null), skill),
+      view,
+      sort
+    ).range(offset, offset + NOTES_PAGE_SIZE - 1);
     // bỏ ký tự đặc biệt của cú pháp filter PostgREST / ilike
     const term = q.replace(/[,()"\\%_*]/g, ' ').trim();
     if (term) req = req.or(`title.ilike.%${term}%,content.ilike.%${term}%`);
@@ -85,22 +88,28 @@ export default function PersonalNotes({
     return rows;
   }
 
-  // tìm kiếm: debounce 300ms rồi nạp lại từ đầu
+  // tìm kiếm: debounce 300ms
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(query), 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  // đổi từ khoá / bộ lọc / thứ tự: nạp lại từ đầu
   useEffect(() => {
     if (firstRender.current) {
       firstRender.current = false;
       return;
     }
-    const t = setTimeout(async () => {
-      setLoading(true);
-      const rows = await fetchPage(query, 0);
+    const id = ++reqId.current;
+    setLoading(true);
+    fetchPage(debounced, 0).then((rows) => {
+      if (id !== reqId.current) return;
       setNotes(rows);
       setDone(rows.length < NOTES_PAGE_SIZE);
       setLoading(false);
-    }, 300);
-    return () => clearTimeout(t);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query]);
+  }, [debounced, view, sort]);
 
   // Lazy load: cuộn tới cuối lưới thì nạp thêm NOTES_PAGE_SIZE ghi chú
   useEffect(() => {
@@ -108,8 +117,10 @@ export default function PersonalNotes({
     if (!el || done) return;
     const io = new IntersectionObserver(async (entries) => {
       if (!entries[0].isIntersecting || loading) return;
+      const id = reqId.current;
       setLoading(true);
-      const rows = await fetchPage(query, notes.length);
+      const rows = await fetchPage(debounced, notes.length);
+      if (id !== reqId.current) return;
       setNotes((ns) => [...ns, ...rows.filter((r) => !ns.some((n) => n.id === r.id))]);
       setDone(rows.length < NOTES_PAGE_SIZE);
       setLoading(false);
@@ -117,17 +128,51 @@ export default function PersonalNotes({
     io.observe(el);
     return () => io.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notes.length, done, loading, query]);
+  }, [notes.length, done, loading, debounced]);
+
+  /** đặt ghi chú vào đúng chỗ, hoặc gỡ khỏi danh sách nếu không còn khớp mục/bộ lọc */
+  function upsert(note: PersonalNote) {
+    setNotes((ns) => {
+      const rest = ns.filter((n) => n.id !== note.id);
+      return note.skill === skill && matchesNoteView(note, view)
+        ? [note, ...rest].sort(compareNotes(sort))
+        : rest;
+    });
+  }
 
   function onSaved(note: PersonalNote) {
-    // ghi chú được chuyển sang kỹ năng khác thì rời khỏi mục này
-    setNotes((ns) =>
-      note.skill === skill
-        ? sortNotes([note, ...ns.filter((n) => n.id !== note.id)])
-        : ns.filter((n) => n.id !== note.id)
-    );
+    upsert(note);
     setDialog(null);
   }
+
+  async function togglePin(note: PersonalNote) {
+    upsert({ ...note, pinned: !note.pinned });
+    const { data, error } = await supabase
+      .from('personal_notes')
+      .update({ pinned: !note.pinned })
+      .eq('id', note.id)
+      .select(NOTE_COLUMNS)
+      .single();
+    upsert(error || !data ? note : (data as PersonalNote));
+  }
+
+  const filtered = !!debounced || view !== 'all';
+  // nhóm "Đã ghim" / "Khác" chỉ khi xem tất cả và có cả hai loại
+  const pinnedNotes = notes.filter((n) => n.pinned);
+  const grouped = view === 'all' && pinnedNotes.length > 0 && pinnedNotes.length < notes.length;
+  const renderGrid = (list: PersonalNote[]) => (
+    <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {list.map((n) => (
+        <NoteCard
+          key={n.id}
+          note={n}
+          cover={urls[n.image_paths[0]]}
+          onOpen={() => setDialog({ note: n })}
+          onTogglePin={() => togglePin(n)}
+        />
+      ))}
+    </div>
+  );
 
   function onDeleted(id: string) {
     setNotes((ns) => ns.filter((n) => n.id !== id));
@@ -155,10 +200,54 @@ export default function PersonalNotes({
         )}
       </div>
 
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Lọc ghi chú">
+          {NOTE_VIEWS.map((v) => {
+            const on = view === v.key;
+            const Icon = v.key === 'pinned' ? Pin : v.key === 'images' ? Images : null;
+            return (
+              <button
+                key={v.key}
+                type="button"
+                onClick={() => setView(v.key)}
+                aria-pressed={on}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium ${
+                  on
+                    ? 'border-ink bg-ink text-white'
+                    : 'border-line text-ink-soft hover:bg-paper hover:text-ink'
+                }`}
+              >
+                {Icon && <Icon className="h-3.5 w-3.5" />}
+                {v.label}
+              </button>
+            );
+          })}
+        </div>
+        <label className="flex items-center gap-2 text-sm text-ink-soft">
+          <ArrowUpDown className="h-4 w-4" />
+          <span className="sr-only">Sắp xếp</span>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as NoteSort)}
+            className="select h-9 w-auto py-1"
+          >
+            {NOTE_SORTS.map((o) => (
+              <option key={o.key} value={o.key}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
       {notes.length === 0 && !loading ? (
-        query ? (
+        filtered ? (
           <p className="py-10 text-center text-sm text-ink-faint">
-            Không có ghi chú nào khớp “{query}”.
+            {debounced
+              ? `Không có ghi chú nào khớp “${debounced}”.`
+              : view === 'pinned'
+                ? 'Chưa ghim ghi chú nào - bấm biểu tượng ghim trên thẻ để đưa lên đầu.'
+                : 'Không có ghi chú nào có ảnh.'}
           </p>
         ) : (
           <EmptyState
@@ -178,17 +267,23 @@ export default function PersonalNotes({
             )}
           </EmptyState>
         )
-      ) : (
-        <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {notes.map((n) => (
-            <NoteCard
-              key={n.id}
-              note={n}
-              cover={urls[n.image_paths[0]]}
-              onOpen={() => setDialog({ note: n })}
-            />
-          ))}
+      ) : grouped ? (
+        <div className="space-y-6">
+          <section>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">
+              Đã ghim
+            </h3>
+            {renderGrid(pinnedNotes)}
+          </section>
+          <section>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">
+              Khác
+            </h3>
+            {renderGrid(notes.filter((n) => !n.pinned))}
+          </section>
         </div>
+      ) : (
+        renderGrid(notes)
       )}
 
       {!done && (
@@ -234,48 +329,68 @@ function NoteCard({
   note,
   cover,
   onOpen,
+  onTogglePin,
 }: {
   note: PersonalNote;
   cover?: string;
   onOpen: () => void;
+  onTogglePin: () => void;
 }) {
   const count = note.image_paths.length;
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="card card-hover block w-full overflow-hidden text-left"
-    >
-      {count > 0 && (
-        <div className="relative aspect-[16/9] bg-paper">
-          {cover && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={cover} alt="" className="h-full w-full object-cover" loading="lazy" />
-          )}
-          {count > 1 && (
-            <span className="pill absolute bottom-2 right-2 bg-ink/70 text-white">
-              <Images className="h-3 w-3" />
-              {count}
-            </span>
-          )}
-        </div>
-      )}
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-2">
-          <p className={`font-semibold ${note.title ? 'text-ink' : 'text-ink-faint'}`}>
+    <div className="group relative">
+      <button
+        type="button"
+        onClick={onOpen}
+        className="card card-hover block w-full overflow-hidden text-left"
+      >
+        {count > 0 && (
+          <div className="relative aspect-[16/9] bg-paper">
+            {cover && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={cover} alt="" className="h-full w-full object-cover" loading="lazy" />
+            )}
+            {count > 1 && (
+              <span className="pill absolute bottom-2 right-2 bg-ink/70 text-white">
+                <Images className="h-3 w-3" />
+                {count}
+              </span>
+            )}
+          </div>
+        )}
+        <div className="p-4">
+          {/* chừa chỗ cho nút ghim khi thẻ không có ảnh bìa */}
+          <p
+            className={`font-semibold ${note.title ? 'text-ink' : 'text-ink-faint'} ${count > 0 ? '' : 'pr-8'}`}
+          >
             {note.title || 'Không tiêu đề'}
           </p>
-          {note.pinned && <Pin className="h-4 w-4 shrink-0 fill-highlight text-ink-soft" />}
+          {!isEmptyHtml(note.content) && (
+            <RichText
+              html={note.content ?? ''}
+              className="mt-1 line-clamp-6 break-words text-sm text-ink-soft"
+            />
+          )}
+          <p className="mt-3 text-xs text-ink-faint">{formatDateTime(note.updated_at)}</p>
         </div>
-        {!isEmptyHtml(note.content) && (
-          <RichText
-            html={note.content ?? ''}
-            className="mt-1 line-clamp-6 break-words text-sm text-ink-soft"
-          />
-        )}
-        <p className="mt-3 text-xs text-ink-faint">{formatDateTime(note.updated_at)}</p>
-      </div>
-    </button>
+      </button>
+      <button
+        type="button"
+        onClick={onTogglePin}
+        aria-pressed={note.pinned}
+        aria-label={note.pinned ? 'Bỏ ghim' : 'Ghim lên đầu'}
+        title={note.pinned ? 'Bỏ ghim' : 'Ghim lên đầu'}
+        className={`absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full transition ${
+          count > 0 ? 'bg-surface/90 shadow-sm' : ''
+        } ${
+          note.pinned
+            ? 'text-ink'
+            : 'text-ink-faint opacity-100 hover:bg-paper hover:text-ink focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100'
+        }`}
+      >
+        <Pin className={`h-4 w-4 ${note.pinned ? 'fill-highlight' : ''}`} />
+      </button>
+    </div>
   );
 }
 

@@ -28,6 +28,53 @@ export function bySkill<Q extends { eq: any; is: any }>(req: Q, skill: SkillKey 
   return skill ? req.eq('skill', skill) : req.is('skill', null);
 }
 
+/** Bộ lọc trong mỗi mục kỹ năng */
+export type NoteView = 'all' | 'pinned' | 'images';
+export type NoteSort = 'updated' | 'created' | 'oldest';
+
+export const NOTE_VIEWS: { key: NoteView; label: string }[] = [
+  { key: 'all', label: 'Tất cả' },
+  { key: 'pinned', label: 'Đã ghim' },
+  { key: 'images', label: 'Có ảnh' },
+];
+export const NOTE_SORTS: { key: NoteSort; label: string }[] = [
+  { key: 'updated', label: 'Mới cập nhật' },
+  { key: 'created', label: 'Mới tạo' },
+  { key: 'oldest', label: 'Cũ nhất' },
+];
+
+/** Áp bộ lọc + thứ tự (ghi chú ghim luôn đứng đầu) cho truy vấn personal_notes */
+export function applyNoteFilters<Q extends { eq: any; neq: any; order: any }>(
+  req: Q,
+  view: NoteView,
+  sort: NoteSort
+): Q {
+  let q = req;
+  if (view === 'pinned') q = q.eq('pinned', true);
+  if (view === 'images') q = q.neq('image_paths', '{}');
+  q = q.order('pinned', { ascending: false });
+  if (sort === 'updated') return q.order('updated_at', { ascending: false });
+  return q.order('created_at', { ascending: sort === 'oldest' });
+}
+
+/** Ghi chú có còn thuộc danh sách đang lọc không (dùng sau khi sửa/ghim) */
+export function matchesNoteView(n: PersonalNote, view: NoteView) {
+  if (view === 'pinned') return n.pinned;
+  if (view === 'images') return n.image_paths.length > 0;
+  return true;
+}
+
+/** Cùng thứ tự với applyNoteFilters, để sắp lại danh sách phía client */
+export function compareNotes(sort: NoteSort) {
+  return (a: PersonalNote, b: PersonalNote) =>
+    Number(b.pinned) - Number(a.pinned) ||
+    (sort === 'updated'
+      ? b.updated_at.localeCompare(a.updated_at)
+      : sort === 'created'
+        ? b.created_at.localeCompare(a.created_at)
+        : a.created_at.localeCompare(b.created_at));
+}
+
 /** Tạo signed URL cho các ảnh trong bucket private → { path: url } */
 export async function signImages(
   supabase: SupabaseClient,
