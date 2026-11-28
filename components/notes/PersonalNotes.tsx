@@ -1,7 +1,22 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUpDown, ImagePlus, Images, Pin, Plus, Search, StickyNote, X } from 'lucide-react';
+import {
+  ArrowUpDown,
+  Check,
+  ImagePlus,
+  Images,
+  Pencil,
+  Pin,
+  Plus,
+  Search,
+  Settings2,
+  StickyNote,
+  Tag,
+  Trash2,
+  X,
+} from 'lucide-react';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import RichTextEditor, { RichTextToolbar } from '@/components/ui/RichTextEditor';
@@ -13,6 +28,8 @@ import { cleanHtml, isEmptyHtml } from '@/lib/rich-text';
 import { SKILL_MAP, type SkillKey } from '@/lib/constants';
 import {
   ACCEPTED_IMAGE_TYPES,
+  CATEGORY_COLUMNS,
+  MAX_CATEGORY_NAME,
   MAX_NOTE_IMAGES,
   NOTES_PAGE_SIZE,
   NOTE_COLUMNS,
@@ -27,12 +44,35 @@ import {
   signImages,
   uploadNoteImage,
   validateImage,
+  type CategoryFilter,
+  type NoteCategory,
   type NoteSort,
   type NoteView,
   type PersonalNote,
 } from '@/lib/personal-notes';
 
 type Urls = Record<string, string>;
+
+const byName = (a: NoteCategory, b: NoteCategory) => a.name.localeCompare(b.name, 'vi');
+
+/** Tạo danh mục cho kỹ năng; trả về danh mục mới hoặc thông báo lỗi */
+async function createCategory(
+  supabase: SupabaseClient,
+  skill: SkillKey,
+  rawName: string
+): Promise<NoteCategory | string> {
+  const name = rawName.trim().replace(/\s+/g, ' ');
+  if (!name) return 'Hãy nhập tên danh mục.';
+  if (name.length > MAX_CATEGORY_NAME) return `Tên danh mục tối đa ${MAX_CATEGORY_NAME} ký tự.`;
+  const { data, error } = await supabase
+    .from('note_categories')
+    .insert({ skill, name })
+    .select(CATEGORY_COLUMNS)
+    .single();
+  if (error?.code === '23505') return `Đã có danh mục “${name}”.`;
+  if (error || !data) return error?.message ?? 'Không tạo được danh mục.';
+  return data as NoteCategory;
+}
 
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString('vi-VN', {
@@ -49,12 +89,15 @@ export default function PersonalNotes({
   skill,
   initialNotes,
   initialUrls,
+  initialCategories,
 }: {
   userId: string;
   /** mục kỹ năng đang xem; null = ghi chú cũ chưa phân loại */
   skill: SkillKey | null;
   initialNotes: PersonalNote[];
   initialUrls: Urls;
+  /** danh mục của mọi kỹ năng */
+  initialCategories: NoteCategory[];
 }) {
   const supabase = createClient();
   const [notes, setNotes] = useState(initialNotes);
@@ -65,6 +108,9 @@ export default function PersonalNotes({
   const [debounced, setDebounced] = useState('');
   const [view, setView] = useState<NoteView>('all');
   const [sort, setSort] = useState<NoteSort>('updated');
+  const [allCategories, setAllCategories] = useState(initialCategories);
+  const [category, setCategory] = useState<CategoryFilter>('all');
+  const [managing, setManaging] = useState(false);
   const [dialog, setDialog] = useState<{ note?: PersonalNote } | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const firstRender = useRef(true);
@@ -72,12 +118,34 @@ export default function PersonalNotes({
   const reqId = useRef(0);
 
   const addUrls = (more: Urls) => setUrls((u) => ({ ...u, ...more }));
+  const categories = skill ? allCategories.filter((c) => c.skill === skill) : [];
+  const categoryName = (id: string | null) =>
+    id ? allCategories.find((c) => c.id === id)?.name : undefined;
+
+  function onCategoryCreated(c: NoteCategory) {
+    setAllCategories((cs) => [...cs, c].sort(byName));
+  }
+  function onCategoryRenamed(c: NoteCategory) {
+    setAllCategories((cs) => cs.map((x) => (x.id === c.id ? c : x)).sort(byName));
+  }
+  function onCategoryDeleted(id: string) {
+    setAllCategories((cs) => cs.filter((c) => c.id !== id));
+    // DB đã set null category_id của các ghi chú thuộc danh mục này
+    if (category === id) setCategory('all');
+    else
+      setNotes((ns) =>
+        ns
+          .map((n) => (n.category_id === id ? { ...n, category_id: null } : n))
+          .filter((n) => matchesNoteView(n, view, category))
+      );
+  }
 
   async function fetchPage(q: string, offset: number) {
     let req = applyNoteFilters(
       bySkill(supabase.from('personal_notes').select(NOTE_COLUMNS).is('deleted_at', null), skill),
       view,
-      sort
+      sort,
+      category
     ).range(offset, offset + NOTES_PAGE_SIZE - 1);
     // bỏ ký tự đặc biệt của cú pháp filter PostgREST / ilike
     const term = q.replace(/[,()"\\%_*]/g, ' ').trim();
@@ -109,7 +177,7 @@ export default function PersonalNotes({
       setLoading(false);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debounced, view, sort]);
+  }, [debounced, view, sort, category]);
 
   // Lazy load: cuộn tới cuối lưới thì nạp thêm NOTES_PAGE_SIZE ghi chú
   useEffect(() => {
@@ -128,13 +196,13 @@ export default function PersonalNotes({
     io.observe(el);
     return () => io.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notes.length, done, loading, debounced]);
+  }, [notes.length, done, loading, debounced, view, sort, category]);
 
   /** đặt ghi chú vào đúng chỗ, hoặc gỡ khỏi danh sách nếu không còn khớp mục/bộ lọc */
   function upsert(note: PersonalNote) {
     setNotes((ns) => {
       const rest = ns.filter((n) => n.id !== note.id);
-      return note.skill === skill && matchesNoteView(note, view)
+      return note.skill === skill && matchesNoteView(note, view, category)
         ? [note, ...rest].sort(compareNotes(sort))
         : rest;
     });
@@ -156,7 +224,7 @@ export default function PersonalNotes({
     upsert(error || !data ? note : (data as PersonalNote));
   }
 
-  const filtered = !!debounced || view !== 'all';
+  const filtered = !!debounced || view !== 'all' || category !== 'all';
   // nhóm "Đã ghim" / "Khác" chỉ khi xem tất cả và có cả hai loại
   const pinnedNotes = notes.filter((n) => n.pinned);
   const grouped = view === 'all' && pinnedNotes.length > 0 && pinnedNotes.length < notes.length;
@@ -167,6 +235,7 @@ export default function PersonalNotes({
           key={n.id}
           note={n}
           cover={urls[n.image_paths[0]]}
+          categoryName={categoryName(n.category_id)}
           onOpen={() => setDialog({ note: n })}
           onTogglePin={() => togglePin(n)}
         />
@@ -223,6 +292,37 @@ export default function PersonalNotes({
             );
           })}
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {skill && (
+            <div className="flex items-center gap-1">
+              <label className="flex items-center gap-2 text-sm text-ink-soft">
+                <Tag className="h-4 w-4" />
+                <span className="sr-only">Lọc theo danh mục</span>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="select h-9 w-auto max-w-[14rem] py-1"
+                >
+                  <option value="all">Mọi danh mục</option>
+                  <option value="none">Chưa có danh mục</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={() => setManaging(true)}
+                className="btn-ghost btn-sm h-9 w-9 p-0"
+                aria-label="Quản lý danh mục"
+                title="Quản lý danh mục"
+              >
+                <Settings2 className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         <label className="flex items-center gap-2 text-sm text-ink-soft">
           <ArrowUpDown className="h-4 w-4" />
           <span className="sr-only">Sắp xếp</span>
@@ -238,6 +338,7 @@ export default function PersonalNotes({
             ))}
           </select>
         </label>
+        </div>
       </div>
 
       {notes.length === 0 && !loading ? (
@@ -247,7 +348,11 @@ export default function PersonalNotes({
               ? `Không có ghi chú nào khớp “${debounced}”.`
               : view === 'pinned'
                 ? 'Chưa ghim ghi chú nào - bấm biểu tượng ghim trên thẻ để đưa lên đầu.'
-                : 'Không có ghi chú nào có ảnh.'}
+                : view === 'images'
+                  ? 'Không có ghi chú nào có ảnh.'
+                  : category === 'none'
+                    ? 'Mọi ghi chú đều đã có danh mục.'
+                    : `Chưa có ghi chú nào trong danh mục “${categoryName(category) ?? ''}”.`}
           </p>
         ) : (
           <EmptyState
@@ -304,6 +409,9 @@ export default function PersonalNotes({
               key={dialog.note?.id ?? 'new'}
               userId={userId}
               skill={skill}
+              defaultCategory={category !== 'all' && category !== 'none' ? category : null}
+              categories={allCategories}
+              onCategoryCreated={onCategoryCreated}
               note={dialog.note}
               urls={urls}
               onUrls={addUrls}
@@ -314,6 +422,23 @@ export default function PersonalNotes({
           )}
         </DialogContent>
       </Dialog>
+
+      {skill && (
+        <Dialog open={managing} onOpenChange={setManaging}>
+          <DialogContent className="max-w-md">
+            <DialogTitle className="mb-3 pr-8 font-display text-lg font-semibold text-ink">
+              Danh mục · {SKILL_MAP[skill].label}
+            </DialogTitle>
+            <CategoryManager
+              skill={skill}
+              categories={categories}
+              onCreated={onCategoryCreated}
+              onRenamed={onCategoryRenamed}
+              onDeleted={onCategoryDeleted}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
@@ -328,11 +453,13 @@ const EMPTY_HINT: Record<SkillKey, string> = {
 function NoteCard({
   note,
   cover,
+  categoryName,
   onOpen,
   onTogglePin,
 }: {
   note: PersonalNote;
   cover?: string;
+  categoryName?: string;
   onOpen: () => void;
   onTogglePin: () => void;
 }) {
@@ -359,6 +486,14 @@ function NoteCard({
           </div>
         )}
         <div className="p-4">
+          {categoryName && (
+            <span
+              className={`pill mb-1.5 max-w-full bg-paper text-ink-soft ${count > 0 ? '' : 'mr-8'}`}
+            >
+              <Tag className="h-3 w-3 shrink-0" />
+              <span className="truncate">{categoryName}</span>
+            </span>
+          )}
           {/* chừa chỗ cho nút ghim khi thẻ không có ảnh bìa */}
           <p
             className={`font-semibold ${note.title ? 'text-ink' : 'text-ink-faint'} ${count > 0 ? '' : 'pr-8'}`}
@@ -397,6 +532,9 @@ function NoteCard({
 function NoteEditor({
   userId,
   skill,
+  defaultCategory,
+  categories,
+  onCategoryCreated,
   note,
   urls,
   onUrls,
@@ -406,6 +544,11 @@ function NoteEditor({
 }: {
   userId: string;
   skill: SkillKey | null;
+  /** ghi chú mới: gán sẵn danh mục đang lọc */
+  defaultCategory: string | null;
+  /** danh mục của mọi kỹ năng */
+  categories: NoteCategory[];
+  onCategoryCreated: (c: NoteCategory) => void;
   note?: PersonalNote;
   urls: Urls;
   onUrls: (u: Urls) => void;
@@ -419,6 +562,13 @@ function NoteEditor({
   const [images, setImages] = useState<string[]>(note?.image_paths ?? []);
   const [pinned, setPinned] = useState(note?.pinned ?? false);
   const [noteSkill, setNoteSkill] = useState<SkillKey | ''>(note?.skill ?? skill ?? '');
+  const [categoryId, setCategoryId] = useState<string>(
+    (note ? note.category_id : defaultCategory) ?? ''
+  );
+  // null = đang chọn trong dropdown; chuỗi = đang nhập tên danh mục mới
+  const [newCategory, setNewCategory] = useState<string | null>(null);
+  const [creatingCategory, setCreatingCategory] = useState(false);
+  const skillCategories = categories.filter((c) => c.skill === noteSkill);
   const [uploading, setUploading] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -438,6 +588,27 @@ function NoteEditor({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function pickSkill(k: SkillKey) {
+    setNoteSkill(k);
+    // danh mục thuộc riêng từng kỹ năng
+    if (k !== noteSkill) {
+      setCategoryId('');
+      setNewCategory(null);
+    }
+  }
+
+  async function addCategory() {
+    if (!noteSkill || newCategory === null) return;
+    setCreatingCategory(true);
+    const res = await createCategory(supabase, noteSkill, newCategory);
+    setCreatingCategory(false);
+    if (typeof res === 'string') return setError(res);
+    setError(null);
+    onCategoryCreated(res);
+    setCategoryId(res.id);
+    setNewCategory(null);
+  }
 
   async function addFiles(files: File[]) {
     if (!files.length) return;
@@ -488,7 +659,10 @@ function NoteEditor({
     }
     if (!noteSkill) return setError('Hãy chọn kỹ năng cho ghi chú.');
     setSaving(true);
-    const payload = { skill: noteSkill, title: title.trim() || null, content: body, image_paths: images, pinned };
+    const payload = {
+      skill: noteSkill,
+      category_id: categoryId || null,
+      title: title.trim() || null, content: body, image_paths: images, pinned };
     const { data, error } = note
       ? await supabase
           .from('personal_notes')
@@ -535,7 +709,7 @@ function NoteEditor({
               type="button"
               role="radio"
               aria-checked={on}
-              onClick={() => setNoteSkill(k)}
+              onClick={() => pickSkill(k)}
               className="pill border"
               style={
                 on
@@ -548,6 +722,65 @@ function NoteEditor({
           );
         })}
       </div>
+
+      {noteSkill && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Tag className="h-4 w-4 text-ink-faint" />
+          {newCategory === null ? (
+            <select
+              value={categoryId}
+              onChange={(e) => {
+                if (e.target.value === '__new') setNewCategory('');
+                else setCategoryId(e.target.value);
+              }}
+              className="select h-9 w-auto min-w-[12rem] max-w-full py-1"
+              aria-label="Danh mục"
+            >
+              <option value="">Không có danh mục</option>
+              {skillCategories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+              <option value="__new">+ Tạo danh mục mới…</option>
+            </select>
+          ) : (
+            <>
+              <input
+                autoFocus
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addCategory();
+                  }
+                }}
+                maxLength={MAX_CATEGORY_NAME}
+                placeholder={`Tên danh mục ${SKILL_MAP[noteSkill].label.toLowerCase()}…`}
+                className="input h-9 w-auto min-w-0 flex-1 py-1 sm:max-w-xs"
+                aria-label="Tên danh mục mới"
+              />
+              <button
+                type="button"
+                onClick={addCategory}
+                disabled={creatingCategory || !newCategory.trim()}
+                className="btn-secondary btn-sm h-9"
+              >
+                {creatingCategory ? <Spinner /> : <Check className="h-4 w-4" />}
+                Tạo
+              </button>
+              <button
+                type="button"
+                onClick={() => setNewCategory(null)}
+                className="btn-ghost btn-sm h-9"
+              >
+                Huỷ
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       <input
         value={title}
@@ -670,6 +903,158 @@ function NoteEditor({
           </ConfirmButton>
         )}
       </div>
+    </div>
+  );
+}
+
+function CategoryManager({
+  skill,
+  categories,
+  onCreated,
+  onRenamed,
+  onDeleted,
+}: {
+  skill: SkillKey;
+  categories: NoteCategory[];
+  onCreated: (c: NoteCategory) => void;
+  onRenamed: (c: NoteCategory) => void;
+  onDeleted: (id: string) => void;
+}) {
+  const supabase = createClient();
+  const [name, setName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function add() {
+    setBusy(true);
+    const res = await createCategory(supabase, skill, name);
+    setBusy(false);
+    if (typeof res === 'string') return setError(res);
+    setError(null);
+    setName('');
+    onCreated(res);
+  }
+
+  async function rename() {
+    if (!editing) return;
+    const next = editing.name.trim().replace(/\s+/g, ' ');
+    if (!next) return setError('Hãy nhập tên danh mục.');
+    setBusy(true);
+    const { data, error } = await supabase
+      .from('note_categories')
+      .update({ name: next })
+      .eq('id', editing.id)
+      .select(CATEGORY_COLUMNS)
+      .single();
+    setBusy(false);
+    if (error?.code === '23505') return setError(`Đã có danh mục “${next}”.`);
+    if (error || !data) return setError(error?.message ?? 'Không đổi tên được.');
+    setError(null);
+    setEditing(null);
+    onRenamed(data as NoteCategory);
+  }
+
+  async function del(id: string) {
+    const { error } = await supabase.from('note_categories').delete().eq('id', id);
+    if (error) return setError(error.message);
+    setError(null);
+    onDeleted(id);
+  }
+
+  return (
+    <div className="space-y-4">
+      <form
+        className="flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          add();
+        }}
+      >
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={MAX_CATEGORY_NAME}
+          placeholder="Tên danh mục mới"
+          className="input h-10 flex-1"
+          aria-label="Tên danh mục mới"
+        />
+        <button type="submit" disabled={busy || !name.trim()} className="btn-primary h-10">
+          <Plus className="h-4 w-4" />
+          Thêm
+        </button>
+      </form>
+
+      {error && <p className="text-sm text-danger">{error}</p>}
+
+      {categories.length === 0 ? (
+        <p className="py-4 text-center text-sm text-ink-faint">
+          Chưa có danh mục nào. Danh mục giúp gom ghi chú cùng chủ đề, vd. “Task 1”, “Từ nối”.
+        </p>
+      ) : (
+        <ul className="divide-y divide-line rounded-lg border border-line">
+          {categories.map((c) => (
+            <li key={c.id} className="flex min-h-[2.75rem] items-center gap-2 px-3 py-1.5">
+              {editing?.id === c.id ? (
+                <form
+                  className="flex flex-1 items-center gap-1"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    rename();
+                  }}
+                >
+                  <input
+                    autoFocus
+                    value={editing.name}
+                    onChange={(e) => setEditing({ id: c.id, name: e.target.value })}
+                    maxLength={MAX_CATEGORY_NAME}
+                    className="input h-8 flex-1 py-1"
+                    aria-label="Tên danh mục"
+                  />
+                  <button
+                    type="submit"
+                    disabled={busy}
+                    className="btn-ghost btn-sm h-8 w-8 p-0"
+                    aria-label="Lưu tên"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditing(null)}
+                    className="btn-ghost btn-sm h-8 w-8 p-0"
+                    aria-label="Huỷ"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </form>
+              ) : (
+                <>
+                  <Tag className="h-4 w-4 shrink-0 text-ink-faint" />
+                  <span className="min-w-0 flex-1 truncate text-sm text-ink">{c.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => setEditing({ id: c.id, name: c.name })}
+                    className="btn-ghost btn-sm h-8 w-8 p-0"
+                    aria-label={`Đổi tên ${c.name}`}
+                    title="Đổi tên"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <ConfirmButton
+                    onConfirm={() => del(c.id)}
+                    question="Xoá? Ghi chú vẫn giữ lại."
+                    confirmLabel="Xoá"
+                    className="btn-ghost btn-sm h-8 w-8 p-0 text-ink-faint hover:text-danger"
+                  >
+                    <Trash2 className="h-4 w-4" aria-label={`Xoá ${c.name}`} />
+                  </ConfirmButton>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

@@ -2,8 +2,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { SkillKey } from './constants';
 
 export const NOTE_BUCKET = 'personal-notes';
-export const NOTE_COLUMNS = 'id, skill, title, content, image_paths, pinned, created_at, updated_at';
-export const NOTES_PAGE_SIZE = 12;
+export const NOTE_COLUMNS =
+  'id, skill, category_id, title, content, image_paths, pinned, created_at, updated_at';
+export const CATEGORY_COLUMNS = 'id, skill, name';
+/** lazy load: 9 thẻ mỗi lần (3 hàng × 3 cột) */
+export const NOTES_PAGE_SIZE = 9;
+export const MAX_CATEGORY_NAME = 40;
 export const MAX_NOTE_IMAGES = 20;
 /** signed URL sống 1 giờ - trang tự tải lại link khi mở lại */
 const SIGNED_URL_TTL = 3600;
@@ -12,6 +16,8 @@ export type PersonalNote = {
   id: string;
   /** null = ghi chú cũ chưa gắn kỹ năng */
   skill: SkillKey | null;
+  /** danh mục do người dùng tạo trong kỹ năng; null = chưa có danh mục */
+  category_id: string | null;
   title: string | null;
   content: string | null;
   image_paths: string[];
@@ -19,6 +25,16 @@ export type PersonalNote = {
   created_at: string;
   updated_at: string;
 };
+
+/** Danh mục ghi chú - riêng cho từng kỹ năng */
+export type NoteCategory = {
+  id: string;
+  skill: SkillKey;
+  name: string;
+};
+
+/** Lọc theo danh mục: 'all' = mọi danh mục, 'none' = chưa có danh mục, còn lại là id */
+export type CategoryFilter = 'all' | 'none' | string;
 
 /** Thứ tự các mục trong tab Language */
 export const NOTE_SKILLS: SkillKey[] = ['listening', 'speaking', 'reading', 'writing'];
@@ -44,21 +60,25 @@ export const NOTE_SORTS: { key: NoteSort; label: string }[] = [
 ];
 
 /** Áp bộ lọc + thứ tự (ghi chú ghim luôn đứng đầu) cho truy vấn personal_notes */
-export function applyNoteFilters<Q extends { eq: any; neq: any; order: any }>(
+export function applyNoteFilters<Q extends { eq: any; neq: any; is: any; order: any }>(
   req: Q,
   view: NoteView,
-  sort: NoteSort
+  sort: NoteSort,
+  category: CategoryFilter = 'all'
 ): Q {
   let q = req;
   if (view === 'pinned') q = q.eq('pinned', true);
   if (view === 'images') q = q.neq('image_paths', '{}');
+  if (category === 'none') q = q.is('category_id', null);
+  else if (category !== 'all') q = q.eq('category_id', category);
   q = q.order('pinned', { ascending: false });
   if (sort === 'updated') return q.order('updated_at', { ascending: false });
   return q.order('created_at', { ascending: sort === 'oldest' });
 }
 
 /** Ghi chú có còn thuộc danh sách đang lọc không (dùng sau khi sửa/ghim) */
-export function matchesNoteView(n: PersonalNote, view: NoteView) {
+export function matchesNoteView(n: PersonalNote, view: NoteView, category: CategoryFilter = 'all') {
+  if (category !== 'all' && n.category_id !== (category === 'none' ? null : category)) return false;
   if (view === 'pinned') return n.pinned;
   if (view === 'images') return n.image_paths.length > 0;
   return true;

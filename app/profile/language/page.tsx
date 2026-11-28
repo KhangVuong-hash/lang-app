@@ -7,12 +7,14 @@ import PersonalNotes from '@/components/notes/PersonalNotes';
 import { SKILL_MAP, type SkillKey } from '@/lib/constants';
 import { SKILL_ICON } from '@/lib/skill-icons';
 import {
+  CATEGORY_COLUMNS,
   NOTES_PAGE_SIZE,
   NOTE_COLUMNS,
   NOTE_SKILLS,
   applyNoteFilters,
   bySkill,
   signImages,
+  type NoteCategory,
   type PersonalNote,
 } from '@/lib/personal-notes';
 
@@ -27,7 +29,9 @@ export default async function LanguageNotesPage({
   const param = searchParams.skill;
 
   // RLS chỉ trả về ghi chú của chính mình
-  const [{ count: unsorted }, ...counts] = await Promise.all([
+  const [{ data: cats }, { count: unsorted }, ...counts] = await Promise.all([
+    // danh mục của mọi kỹ năng (ít dòng) - editor cần khi chuyển ghi chú sang kỹ năng khác
+    supabase.from('note_categories').select(CATEGORY_COLUMNS).order('name'),
     supabase
       .from('personal_notes')
       .select('id', { count: 'exact', head: true })
@@ -55,6 +59,7 @@ export default async function LanguageNotesPage({
   );
   const { data } = await applyNoteFilters(base, 'all', 'updated').range(0, NOTES_PAGE_SIZE - 1);
   const notes = (data ?? []) as PersonalNote[];
+  const categories = (cats ?? []) as NoteCategory[];
   // chỉ ký sẵn ảnh bìa; ảnh còn lại ký khi mở ghi chú
   const urls = await signImages(supabase, notes.map((n) => n.image_paths[0]).filter(Boolean));
 
@@ -119,6 +124,7 @@ export default async function LanguageNotesPage({
         skill={skill}
         initialNotes={notes}
         initialUrls={urls}
+        initialCategories={categories}
       />
     </div>
   );
